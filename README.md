@@ -175,7 +175,9 @@ The ring moves when it's on screen. To also switch a tablet to the ring's view, 
 
 ## Try it without Home Assistant
 
-Open [`demo/index.html`](demo/index.html) in a browser. It runs the card on a made-up house, with buttons to ring the doorbell, walk into the kitchen and send a voice request.
+**[Open the live demo](https://anchorapp100.github.io/home-ring-card/demo/)**. It runs the card on a made-up house, with buttons to ring the doorbell, walk into the kitchen and send a voice request.
+
+The demo is one self-contained file, [`demo/index.html`](demo/index.html), so you can also download it and open it from your computer. If you change the card or the demo, rebuild it with `node demo/build.mjs`; it is generated from `demo/template.html`.
 
 ## Good to know
 

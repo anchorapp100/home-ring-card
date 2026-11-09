@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home Ring demo</title>
+<style>
+  :root{--bg:#06090e;--text:#e7eef5;--muted:#8a97a6;--line:rgba(255,255,255,.1);--accent:#ffb638;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  main{max-width:1500px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px;}
+  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;}
+  h1{margin:0;font-size:22px;letter-spacing:-.3px;}
+  header p{margin:0;color:var(--muted);font-size:13.5px;}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;}
+  .bar button{all:unset;cursor:pointer;font-size:13px;font-weight:700;padding:7px 13px;border-radius:999px;border:1px solid var(--line);color:var(--text);}
+  .bar button:hover{border-color:var(--accent);} .bar button:focus-visible{box-shadow:0 0 0 2px #fff;}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;}
+  .mini{max-width:560px;}
+  body.shot header,body.shot .bar,body.shot .mini{display:none;}
+  body.shot main{padding:0;max-width:none;}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Home Ring</h1><p>A made-up house running on fake data. Tap a ring to go in, the centre to come back out, hold to switch, slide on a light to dim it.</p></header>
+  <div class="bar">
+    <button data-do="ding">Ring the doorbell</button>
+    <button data-do="motion">Walk into the kitchen</button>
+    <button data-do="voice">Say "show me the office"</button>
+  </div>
+  <div class="grid">
+    <home-ring-card id="full"></home-ring-card>
+    <div class="mini"><home-ring-card id="mini"></home-ring-card></div>
+  </div>
+</main>
+<script>/*INLINE:demo/demo-house.js*/</script>
+<script>/*INLINE:dist/home-ring-card.js*/</script>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.has('shot')) document.body.classList.add('shot');
+  const full = document.getElementById('full'), mini = document.getElementById('mini');
+  full.setConfig({
+    height: q.get('h') || 'min(82vh, 820px)',
+    mode: q.get('mode') || 'rooms',
+    cameras: [
+      { name: 'Front door', entity: 'camera.front_door', doorbell: 'binary_sensor.doorbell_ding', motion: ['binary_sensor.driveway_motion'] },
+      { name: 'Garden', entity: 'camera.garden' },
+    ],
+    heating: { entity: 'water_heater.boiler', hold_mode: 'boost_60' },
+    energy: [
+      { entity: 'sensor.solar_power', name: 'Solar', kind: 'solar' },
+      { entity: 'sensor.battery_power', name: 'Battery', kind: 'battery' },
+      { entity: 'sensor.battery_level', name: 'Battery charge', kind: 'battery_level' },
+      { entity: 'sensor.grid_power', name: 'Grid', kind: 'grid' },
+      { entity: 'sensor.house_load', name: 'House use', kind: 'load' },
+    ],
+    voice_entity: 'input_text.home_ring_focus',
+  });
+  mini.setConfig({ mini: true, height: '230px' });
+  let hass;
+  const push = h => { hass = h; full.hass = h; mini.hass = h; };
+  push(HomeRingDemo.makeHass(push));
+  // demo-only events: change the fake states the way Home Assistant would
+  const setState = (eid, state) => hass.setState(eid, state);
+  document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
+    const k = b.dataset.do;
+    if (k === 'ding') { setState('binary_sensor.doorbell_ding', 'on'); setTimeout(() => setState('binary_sensor.doorbell_ding', 'off'), 3000); }
+    if (k === 'motion') { setState('binary_sensor.kitchen_motion', 'on'); setTimeout(() => setState('binary_sensor.kitchen_motion', 'off'), 8000); }
+    if (k === 'voice') setState('input_text.home_ring_focus', 'area:Office|' + Math.floor(Date.now() / 1000));
+  });
+  // ?focus=area:office opens the ring there (used for screenshots)
+  if (q.get('focus')) setTimeout(() => setState('input_text.home_ring_focus', q.get('focus') + '|' + Math.floor(Date.now() / 1000)), 300);
+</script>
+</body>
+</html>

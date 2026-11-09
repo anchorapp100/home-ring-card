@@ -34,6 +34,9 @@
   const media = (eid, area, name, st, title, artist) => add(eid, area, st, { friendly_name: name, media_title: title, media_artist: artist, volume_level: 0.32, source: 'Radio', source_list: ['Radio', 'Spotify', 'TV'] });
   const cam = (eid, area, name, pic) => add(eid, area, 'idle', { friendly_name: name, entity_picture: pic });
 
+  const svgUri = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const CAM_GARDEN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27415f"/><stop offset="1" stop-color="#7d93a8"/></linearGradient></defs><rect width="640" height="360" fill="url(#s)"/><rect y="235" width="640" height="125" fill="#3e5a3a"/><path d="M0 235 Q160 200 320 228 T640 220 V240 H0Z" fill="#4c6b45"/><rect x="430" y="150" width="160" height="90" fill="#6b5442"/><path d="M420 150 L510 105 L600 150Z" fill="#53402f"/><rect x="60" y="225" width="300" height="10" fill="#8a7a64"/><g fill="#2f4a2c"><circle cx="110" cy="190" r="42"/><circle cx="160" cy="170" r="52"/><circle cx="215" cy="195" r="38"/></g><text x="16" y="28" font-family="monospace" font-size="16" fill="#fff" opacity=".8">GARDEN  CAM 2</text></svg>';
+  const CAM_FRONT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><rect width="640" height="360" fill="#5f6f7f"/><rect y="250" width="640" height="110" fill="#4a4a4e"/><path d="M0 250 L640 250 L640 268 L0 268Z" fill="#6d6d72"/><rect x="250" y="90" width="140" height="160" fill="#2e3a48"/><rect x="262" y="104" width="116" height="146" fill="#7a3b2e"/><circle cx="362" cy="180" r="5" fill="#d8c27a"/><rect x="60" y="110" width="130" height="90" fill="#a9c3d6" opacity=".6"/><rect x="450" y="110" width="130" height="90" fill="#a9c3d6" opacity=".6"/><rect x="120" y="270" width="200" height="60" rx="10" fill="#2b2f36"/><text x="16" y="28" font-family="monospace" font-size="16" fill="#fff" opacity=".8">FRONT DOOR  CAM 1</text></svg>';
   // Ground floor
   light('light.living_room_ceiling', 'living_room', 'Living Room Ceiling', true, 70);
   light('light.living_room_floor_lamp', 'living_room', 'Living Room Floor Lamp', true, 45, 'rgb');
@@ -90,12 +93,12 @@
   light('light.garden_festoon', 'garden', 'Garden Festoon Lights', false, 0, 'onoff');
   sw('switch.garden_fountain', 'garden', 'Garden Fountain', false);
   bs('binary_sensor.garden_gate', 'garden', 'Garden Gate', 'opening', false, 400);
-  cam('camera.garden', 'garden', 'Garden Camera', 'cam-garden.svg');
+  cam('camera.garden', 'garden', 'Garden Camera', svgUri(CAM_GARDEN));
   light('light.driveway_floodlight', 'driveway', 'Driveway Floodlight', false, 0, 'onoff');
   bs('binary_sensor.driveway_motion', 'driveway', 'Driveway Motion', 'motion', false, 6);
   bs('binary_sensor.doorbell_ding', 'driveway', 'Doorbell Ding', 'occupancy', false, 300);
   entities['binary_sensor.doorbell_ding'].hidden = true;           // the doorbell button itself: not a thing for the ring
-  cam('camera.front_door', 'driveway', 'Front Door Camera', 'cam-front.svg');
+  cam('camera.front_door', 'driveway', 'Front Door Camera', svgUri(CAM_FRONT));
   // Energy (shown under "By system")
   add('sensor.solar_power', 'utility', '2140', { friendly_name: 'Solar Power', unit_of_measurement: 'W', device_class: 'power' });
   add('sensor.battery_power', 'utility', '860', { friendly_name: 'Battery Power', unit_of_measurement: 'W', device_class: 'power' });

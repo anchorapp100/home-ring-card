@@ -861,7 +861,7 @@ function createRing(sr, host, CFG) {
       const b = $('bsh'); if (b) b.innerHTML += kv('Last 24 hours', n + ' time' + (n === 1 ? '' : 's'));
     });
   }
-  const withT = p => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const withT = p => /^(data|blob):/.test(p) ? p : p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // fresh still each time
   function wire(el, eid, d, a) {
     el.querySelectorAll('[data-a]').forEach(b => {
       const k = b.dataset.a, v = b.dataset.v;
