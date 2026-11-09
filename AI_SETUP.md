@@ -69,6 +69,7 @@ B. THE CARD. One YAML block I can paste into a card's code editor. Options:
    voice_entity: input_text.home_ring_focus   only with the voice add-on
    temperature_tint: true | false; comfort_temperature (default 20.5); temperature_span (default 4)
    motion_pulse: true | false
+   layout_lock: true | false         the Lock layout button (on by default; locking is done on screen)
    Leave out any option whose default is fine. Keep the YAML short and valid.
 
 C. WHERE TO PUT IT. For a wall tablet: a new dashboard view with "panel: true" holding just this

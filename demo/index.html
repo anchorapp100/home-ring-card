@@ -230,7 +230,7 @@
  * slide on a light to dim it. Everything comes from Home Assistant's own floors, areas and entities, so new
  * devices appear by themselves once they have a room.
  */
-const HOME_RING_VERSION = '1.0.0';
+const HOME_RING_VERSION = '1.1.0';
 
 const HR_CSS = `
 :host{
@@ -313,6 +313,10 @@ ha-card{display:block;background:var(--bg);color:var(--text);overflow:hidden;bor
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;}
 .seg button{all:unset;cursor:pointer;font-size:12px;font-weight:800;color:var(--muted);padding:5px 12px;border-radius:999px;}
 .seg button.on{background:rgba(255,255,255,.11);color:var(--text);}
+#lockseg[hidden],#tidy[hidden]{display:none;}
+#lock{display:inline-flex;align-items:center;gap:6px;}
+#lock svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+#lock.on{color:var(--light);}
 #legend{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);font-weight:700;}
 #legend i{width:96px;height:8px;border-radius:999px;background:linear-gradient(90deg,#4a8dff,rgba(255,255,255,.14) 45%,rgba(255,255,255,.14) 55%,#ff8a3d);}
 #ctl{flex:1 1 auto;min-height:0;overflow:auto;}
@@ -377,7 +381,9 @@ input[type=range]{flex:1 1 auto;accent-color:var(--light);height:28px;}
 .chip .s{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* mini: floors and rooms only, a summary beside it, tap to open the full ring */
 #minibox{display:none;}
-#app.mini{height:var(--hr-height,220px);grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;padding:10px 12px;cursor:pointer;}
+ha-card.mini{background:transparent;box-shadow:none;border:0;}
+#app.mini{height:var(--hr-height,220px);grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;padding:10px 12px;cursor:pointer;
+  background:var(--cardgrad);border:1px solid rgba(255,255,255,.10);border-radius:var(--ha-card-border-radius,16px);}
 #app.mini #side,#app.mini .hots{display:none;}
 #app.mini #minibox{display:flex;flex-direction:column;justify-content:center;gap:7px;min-width:0;}
 #minibox .mt{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;}
@@ -426,6 +432,7 @@ const HR_HTML = `
       <div id="title">Home</div>
       <div id="summary"></div>
       <div class="tools"><div class="seg" id="mode" role="group" aria-label="Arrange by"><button data-m="rooms">By room</button><button data-m="systems">By system</button></div>
+        <div class="seg" id="lockseg" hidden><button id="lock" aria-pressed="false"></button><button id="tidy" hidden title="Lay the rooms out afresh and lock them there">Re-tidy</button></div>
         <div id="legend" title="Room colour shows its thermostat's temperature: blue = cold, orange = warm">Cold<i></i>Warm</div></div>
     </div>
     <div class="card" id="ctl"></div>
@@ -507,6 +514,8 @@ function normaliseConfig(c) {
     comfort: num(c.comfort_temperature) ?? 20.5,
     span: Math.max(0.5, num(c.temperature_span) ?? 4),
     motion_pulse: c.motion_pulse !== false,
+    layout_lock: c.layout_lock !== false,
+    layout_key: String(c.layout_key || 'home_ring_layout'),
   };
 }
 
@@ -519,7 +528,7 @@ function createRing(sr, host, CFG) {
   const PFX = 'hr' + Math.random().toString(36).slice(2, 7) + '-';   // ids for the curved-label paths
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MINI = CFG.mini;
-  if (MINI) $('app').classList.add('mini');
+  if (MINI) { $('app').classList.add('mini'); Q('ha-card').classList.add('mini'); }
   if (CFG.height) $('app').style.setProperty('--hr-height', CFG.height);
   if (!CFG.hot_buttons) QA('.hot').forEach(b => b.hidden = true);
   if (!CFG.temperature_tint) $('legend').style.display = 'none';
@@ -602,7 +611,29 @@ function createRing(sr, host, CFG) {
 
   /* ---------- the tree: Home > floors > rooms > kinds > things ---------- */
   let nodes = [], root = null, focus = null, sel = null, hot = null, hoverN = null, H = null, lastStates = null;
-  function build(h) {
+  /* ---------- layout lock: every floor, room, kind and thing keeps its place and size ----------
+     A saved layout lists, for every group, its children in order with their sizes, and where each room's centre
+     was. While it is locked, known things keep their saved order and size, new ones join the end of their group,
+     and the ring turns slightly so the rooms you know stay where they were. */
+  const nodeKey = n => n.kind === 'home' ? 'h' : n.kind === 'floor' ? 'f:' + (n.id ?? '_') : n.kind === 'area' ? 'a:' + n.id : n.kind === 'cat' ? 'c:' + n.cat : 'e:' + n.eid;
+  const pathKey = n => n.parent ? pathKey(n.parent) + '/' + nodeKey(n) : nodeKey(n);
+  let LAYOUT = null, layoutShared = null, unsubLayout = null, layoutStarted = false;
+  function applyLock(n, order) {
+    if (!n.kids.length) return;
+    const saved = order[pathKey(n)];
+    if (saved) {
+      const idx = new Map(saved.map((s, i) => [s[0], i])), wt = new Map(saved);
+      n.kids.sort((a, b) => (idx.get(nodeKey(a)) ?? 1e9) - (idx.get(nodeKey(b)) ?? 1e9));   // stable: new ones stay in name order at the end
+      // a new room or floor starts slim (Re-tidy gives it its full size); new things squeeze into their room
+      n.kids.forEach(k => { const w = wt.get(nodeKey(k)); if (w != null) k.lw = w; else if (k.kind === 'area' || k.kind === 'floor') k.lw = 1; });
+    }
+    n.kids.forEach(k => applyLock(k, order));
+    if (saved && n.kind === 'floor' && n.lw != null) {   // a floor grows or shrinks with the rooms it gains or loses
+      const was = saved.reduce((s, x) => s + x[1], 0), now = n.kids.reduce((s, k) => s + (k.lw ?? 1), 0);
+      if (was > 0 && now > 0) n.lw *= now / was;
+    }
+  }
+  function build(h, ignoreLock) {
     const floors = h.floors || {}, devices = h.devices || {}, ents = h.entities || {}, states = h.states;
     const areas = Object.assign({}, h.areas || {});
     for (const a of Object.keys(areas)) { const ar = areas[a]; if (CFG.exclude_areas.includes(String(a).toLowerCase()) || CFG.exclude_areas.includes(String(ar.name).toLowerCase())) delete areas[a]; }
@@ -672,13 +703,25 @@ function createRing(sr, host, CFG) {
         }
       }
     }
+    const snap = !ignoreLock && CFG.layout_lock && LAYOUT && LAYOUT.modes && LAYOUT.modes[sysMode ? 'systems' : 'rooms'];
+    if (snap && snap.order) applyLock(R, snap.order);
     nodes = [];
     (function walk(n, d) { n.depth = d; n.i = nodes.length; nodes.push(n); n.kids.forEach((k, j) => { k.alt = j % 2 === 1; walk(k, d + 1); }); })(R, 0);
     (function weigh(n) { n.w = n.kids.length ? n.kids.reduce((s, k) => s + weigh(k), 0) : 1; return n.w; })(R);
-    (function part(n, x0, x1) {
-      n.x0 = x0; n.x1 = x1; const ws = n.kids.map(k => Math.pow(k.w, .6)), t = ws.reduce((a, b) => a + b, 0) || 1; let x = x0;
+    (function part(n, x0, x1) {   // sizes grow with the number of things, gently (a locked layout keeps its saved sizes)
+      n.x0 = x0; n.x1 = x1; const ws = n.kids.map(k => k.lw ?? Math.pow(k.w, .6)), t = ws.reduce((a, b) => a + b, 0) || 1; let x = x0;
       n.kids.forEach((k, i) => { const x2 = x + (x1 - x0) * ws[i] / t; part(k, x, x2); x = x2; });
     })(R, 0, 1);
+    // locked: turn the ring so the rooms you know sit, on average, exactly where they were saved
+    R.rot = 0;
+    if (snap && snap.centres) {
+      let s = 0, sw = 0;
+      for (const n of nodes) {
+        if (n.kind !== 'area') continue; const c = snap.centres[pathKey(n)]; if (c == null) continue;
+        let d = c - (n.x0 + n.x1) / 2; d -= Math.round(d); const w = n.x1 - n.x0; s += d * w; sw += w;
+      }
+      if (sw) R.rot = s / sw;
+    }
     return R;
   }
   const leaves = n => n.kind === 'ent' ? [n] : n.kids.flatMap(leaves);
@@ -703,7 +746,9 @@ function createRing(sr, host, CFG) {
     svg.setAttribute('viewBox', `${-S / 2} ${-S / 2} ${S} ${S}`);
   }
   function edge(k) { if (k < 0) return Math.max(0, B[0] * (1 + k)); if (k >= B.length - 1) return RMAX; const i = Math.floor(k); return lerp(B[i], B[i + 1], k - i); }
-  const ang = x => clamp((x - view.x0) / (view.x1 - view.x0), 0, 1) * TAU - Math.PI;
+  // the locked layout's turn applies to the whole house and fades out as you zoom into a floor
+  const ang = x => clamp((x - view.x0) / (view.x1 - view.x0), 0, 1) * TAU - Math.PI + (root && root.rot ? root.rot * TAU * clamp(1 - view.d, 0, 1) : 0);
+  const wrapA = a => a - TAU * Math.round(a / TAU);
   const pt = (a, r) => [r * Math.sin(a), -r * Math.cos(a)], f = v => v.toFixed(2);
   function arcD(a0, a1, r0, r1) {
     if (a1 - a0 >= TAU - 1e-5) {
@@ -777,7 +822,7 @@ function createRing(sr, host, CFG) {
       const px = k === 1 ? 15 : k === 2 ? 13.5 : 12.5, sub = subOf(n);
       const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'lb');
       if (arc > thick * 1.05 && arc > 64) {             // wide: the name curves along the ring
-        const mid = (a0 + a1) / 2, bottom = Math.abs(mid) > Math.PI / 2;
+        const mid = wrapA((a0 + a1) / 2), bottom = Math.abs(mid) > Math.PI / 2;
         const name = fitText(n.name, px, arc - 16); if (!name) continue;
         const showS = sub && thick >= 40, rN = showS ? (bottom ? rm - 7 : rm + 7) : rm, rS = bottom ? rm + 10 : rm - 10;
         const mkp = (r, id) => {
@@ -792,7 +837,7 @@ function createRing(sr, host, CFG) {
         if (lines < 1 || avail < 20) continue;
         const rows = [[fitText(n.name, rpx, avail), 'nm']]; if (lines >= 2 && sub) rows.push([fitText(sub, 10.5, avail), 'sub']);
         const ok = rows.filter(r => r[0]); if (!ok.length) continue;
-        const mid = (a0 + a1) / 2, dg = mid * 180 / Math.PI, right = mid >= 0, rot = right ? dg - 90 : dg + 90, x = right ? r0 + 7 : -(r0 + 7);
+        const mid = wrapA((a0 + a1) / 2), dg = mid * 180 / Math.PI, right = mid >= 0, rot = right ? dg - 90 : dg + 90, x = right ? r0 + 7 : -(r0 + 7);
         g.setAttribute('transform', `rotate(${f(rot)})`);
         g.innerHTML = ok.map((r, i) => `<text class="${r[1]}" x="${f(x)}" y="${f((i - (ok.length - 1) / 2) * lh)}" text-anchor="${right ? 'start' : 'end'}" dominant-baseline="central"${r[1] === 'nm' ? ` style="font-size:${rpx}px"` : ''}>${esc(r[0])}</text>`).join('');
       }
@@ -814,12 +859,15 @@ function createRing(sr, host, CFG) {
 
   /* ---------- scenes: a band around the whole house; tap one to run it ---------- */
   const sceneName = eid => { const st = states()[eid]; return (st && st.attributes && st.attributes.friendly_name) || eid.split('.')[1].replace(/_/g, ' '); };
-  function sceneList() {
+  function sceneList(noLock) {
     if (!H || !CFG.scenes) return [];
     if (Array.isArray(CFG.scenes)) return CFG.scenes.filter(e => H.states[e]);
     const ents = H.entities || {};
-    return Object.keys(H.states).filter(e => e.startsWith('scene.') && !(ents[e] && (ents[e].hidden || ents[e].entity_category)) && !CFG.exclude(e, sceneName(e)))
+    const L = Object.keys(H.states).filter(e => e.startsWith('scene.') && !(ents[e] && (ents[e].hidden || ents[e].entity_category)) && !CFG.exclude(e, sceneName(e)))
       .sort((a, b) => sceneName(a).localeCompare(sceneName(b)));
+    const saved = !noLock && CFG.layout_lock && LAYOUT && LAYOUT.scenes;      // locked: known scenes keep their place, new ones join the end
+    if (saved) { const idx = new Map(saved.map((e, i) => [e, i])); L.sort((a, b) => (idx.get(a) ?? 1e9) - (idx.get(b) ?? 1e9)); }
+    return L;
   }
   function drawScenes() {
     gS.textContent = '';
@@ -983,6 +1031,7 @@ function createRing(sr, host, CFG) {
     const off = L.filter(e => unavail(states()[e.eid])).length;
     $('summary').innerHTML = (on.length ? on.join(' · ') + ' on' : 'Nothing on') + ` · ${L.length} thing${L.length === 1 ? '' : 's'}` + (off ? ` · <span style="color:var(--alert)">${off} unavailable</span>` : '');
     $('mode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === MODE));
+    lockUi();
     $('legend').style.display = CFG.temperature_tint && (focus.kind === 'home' || focus.kind === 'floor') ? '' : 'none';
     // the list: rooms for the house and floors, things for a room or kind (By system at home: the systems)
     const sysHome = MODE === 'systems' && focus.kind === 'home';
@@ -1290,6 +1339,72 @@ function createRing(sr, host, CFG) {
   }
 
   /* ---------- By room / By system ---------- */
+  /* ---------- layout lock: saving and sharing ----------
+     Kept in Home Assistant's shared frontend data, so every screen and every user sees the same locked ring and
+     follows a change at once. Writing it needs an admin; anyone else (or an older Home Assistant without shared
+     data) locks just their own browser instead. */
+  const LOCAL_KEY = 'homeRing:' + CFG.layout_key;
+  const localLayout = () => { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null'); } catch (e) { return null; } };
+  const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  const OPEN_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>';
+  function setLayout(v) {
+    v = v || null;
+    if (JSON.stringify(v) === JSON.stringify(LAYOUT)) return;
+    LAYOUT = v; structKey = ''; if (H && root) update(H);
+  }
+  function startLayoutSync() {
+    if (layoutStarted || !H || !CFG.layout_lock) return; layoutStarted = true;
+    const conn = H.connection;
+    if (!conn || !conn.subscribeMessage) { layoutShared = false; setLayout(localLayout()); return; }
+    conn.subscribeMessage(m => { layoutShared = true; setLayout(m && m.value != null ? m.value : localLayout()); },
+      { type: 'frontend/subscribe_system_data', key: CFG.layout_key })
+      .then(u => { if (destroyed) u(); else unsubLayout = u; }, () => { layoutShared = false; setLayout(localLayout()); });
+  }
+  function makeLayout() {                 // the layout as it is now, unlocked, for both views
+    const keep = MODE, modes = {};
+    for (const m of ['rooms', 'systems']) {
+      MODE = m; const R = build(H, true), order = {}, centres = {};
+      (function walk(n) {
+        if (n.kids.length) { order[pathKey(n)] = n.kids.map(k => [nodeKey(k), +Math.pow(k.w, .6).toFixed(4)]); n.kids.forEach(walk); }
+        if (n.kind === 'area') centres[pathKey(n)] = +((n.x0 + n.x1) / 2).toFixed(5);
+      })(R);
+      modes[m] = { order, centres };
+    }
+    MODE = keep;
+    const out = { v: 1, at: new Date().toISOString(), modes, scenes: sceneList(true) };
+    structKey = ''; update(H);            // building the snapshots replaced the ring's own tree: put it back
+    return out;
+  }
+  async function saveLayout(v) {          // 'all' = every screen, 'here' = this browser, null = not allowed
+    if (layoutShared && H.callWS) {
+      try { await H.callWS({ type: 'frontend/set_system_data', key: CFG.layout_key, value: v }); try { localStorage.removeItem(LOCAL_KEY); } catch (e) {} return 'all'; }
+      catch (e) { if (!v && LAYOUT && !localLayout()) return null; }     // unlocking a shared lock needs an admin
+    }
+    try { if (v) localStorage.setItem(LOCAL_KEY, JSON.stringify(v)); else localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+    setLayout(v); return 'here';
+  }
+  function lockUi() {
+    const seg = $('lockseg'); seg.hidden = !CFG.layout_lock || MINI; if (seg.hidden) return;
+    const b = $('lock'), on = !!LAYOUT;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+    b.innerHTML = (on ? LOCK_SVG : OPEN_SVG) + (on ? 'Locked' : 'Lock layout');
+    b.title = on ? 'Rooms keep their places. Tap to unlock.' : 'Keep every room where it is now; new rooms join the end of their floor';
+    $('tidy').hidden = !on;
+  }
+  $('lock').onclick = async () => {
+    if (!H || !root) return;
+    const r = await saveLayout(LAYOUT ? null : makeLayout()); buzz();
+    if (r === null) toast('Only an admin can unlock the shared layout');
+    else toast(LAYOUT ? (r === 'all' ? 'Layout locked on every screen' : 'Layout locked in this browser') : 'Layout unlocked');
+    lockUi();
+  };
+  $('tidy').onclick = async () => {
+    if (!H || !root) return;
+    const r = await saveLayout(makeLayout()); buzz();
+    toast(r === 'all' ? 'Rooms tidied and locked on every screen' : 'Rooms tidied and locked in this browser'); lockUi();
+  };
+  let destroyed = false;
+
   function setMode(m) { if (m === MODE) return; MODE = m; LS.set('homeRingMode', m); sel = null; focus = null; structKey = ''; if (H) update(H); }
   $('mode').querySelectorAll('button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 
@@ -1332,6 +1447,7 @@ function createRing(sr, host, CFG) {
   function update(h) {
     if (!h || !h.states) return;
     H = h; $('wait').style.display = 'none';
+    startLayoutSync();
     const key = regKeyOf(h) + '|' + Object.keys(h.states).length + '|' + MODE;   // a new thing's state can arrive after its registry entry
     if (key !== structKey || !root) {
       structKey = key; const was = focus, wsel = sel;
@@ -1351,7 +1467,7 @@ function createRing(sr, host, CFG) {
   }
   function resize() { if (root) { geom(); draw(); labels(); } }
   const clock = setInterval(() => { if (root) hotBtns(); }, 15000);     // "movement" fades after two minutes
-  function destroy() { clearInterval(clock); clearInterval(camTimer); stopCams(); clearTimeout(hotAuto); cancelAnimationFrame(anim); }
+  function destroy() { destroyed = true; if (unsubLayout) { try { unsubLayout(); } catch (e) {} unsubLayout = null; } clearInterval(clock); clearInterval(camTimer); stopCams(); clearTimeout(hotAuto); cancelAnimationFrame(anim); }
   return { update, resize, destroy };
 }
 

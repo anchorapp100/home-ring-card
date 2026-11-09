@@ -17,6 +17,7 @@ Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there
 - **Room colours follow the temperature.** A room with a thermostat leans blue when it's cold and orange when it's warm.
 - **Motion makes the room pulse**, so you can see someone walk through the house.
 - **Scenes** sit in a band around the outside. Tap one to run it.
+- **Layout lock.** Tap **Lock layout** and every room stays exactly where it is. New devices squeeze into their room, and a new room starts slim at the end of its floor, so the rooms you know move a degree or two at most. **Re-tidy** lays everything out afresh. The lock is kept in Home Assistant, so every screen shows the same ring.
 - **By room or By system.** Switch the ring to Lights, Heating, Energy, TV & music, Security and Blinds, each split by room. Energy can include your solar, battery and grid readings.
 - **Corner buttons** for Cameras, Lights, Alarm and Heating:
   - Cameras opens a grid of stills, and opens by itself when a doorbell rings.
@@ -132,6 +133,7 @@ comfort_temperature: 20.5           # rooms at this temperature keep their own c
 temperature_span: 4                 # fully blue or orange this many degrees away
 motion_pulse: true
 hot_buttons: true
+layout_lock: true
 ```
 
 | Option | Default | What it does |
@@ -156,6 +158,21 @@ hot_buttons: true
 | `voice_entity` | none | See "Voice" below |
 | `temperature_tint`, `comfort_temperature`, `temperature_span` | `true`, `20.5`, `4` | Room colour by temperature |
 | `motion_pulse` | `true` | Rooms pulse on motion |
+| `layout_lock` | `true` | Show the Lock layout button and follow a saved lock (`false` hides it) |
+| `layout_key` | `home_ring_layout` | Name the lock is saved under; give two rings different keys to lock them separately |
+
+## Layout lock
+
+Without a lock, rooms are placed by a fixed rule: floors in level order, rooms in name order, and each room sized by how many things it has. Switching things on and off never moves anything. Adding a device nudges its neighbours by a degree or so, but a new room slots in by name and can push the rooms after it round by 15–25°.
+
+Tap **Lock layout** in the panel to pin the ring as it is:
+
+- Every floor, room, kind and thing keeps its place and size.
+- New devices fit inside their room's slice.
+- A new room joins the end of its floor, slim at first. The ring turns slightly so the rooms you know stay put, typically moving 2–5° at most.
+- **Re-tidy** lays the ring out afresh, with new rooms at full size, and locks it again. Tap **Locked** to unlock.
+
+The lock is saved in Home Assistant's shared frontend data, so the tablet, phones and browsers all show the same ring, and they all update when it changes. Locking for everyone needs an admin user. Anyone else locks only their own browser, and so does a Home Assistant too old for shared frontend data.
 
 ## Voice (optional)
 
