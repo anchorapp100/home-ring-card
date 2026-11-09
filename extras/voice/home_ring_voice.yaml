@@ -1,0 +1,36 @@
+# Home Ring voice: say "show me the kitchen", "show me the first floor" or "show me the whole house"
+# and the ring on screen moves there. Put this file in your packages folder (see the README).
+# The card needs `voice_entity: input_text.home_ring_focus`.
+input_text:
+  home_ring_focus:
+    name: Home Ring focus
+    max: 255
+
+intent_script:
+  HomeRingShowArea:
+    action:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.home_ring_focus
+        data:
+          value: "area:{{ area }}|{{ now().timestamp() | int }}"
+    speech:
+      text: "Showing {{ area }}."
+  HomeRingShowFloor:
+    action:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.home_ring_focus
+        data:
+          value: "floor:{{ floor }}|{{ now().timestamp() | int }}"
+    speech:
+      text: "Showing {{ floor }}."
+  HomeRingShowHome:
+    action:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.home_ring_focus
+        data:
+          value: "home|{{ now().timestamp() | int }}"
+    speech:
+      text: "Showing the whole house."

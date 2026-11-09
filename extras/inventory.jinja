@@ -1,0 +1,47 @@
+{#- Home Ring: a list of your floors, rooms and the things the ring can show.
+    Paste this into Home Assistant > Developer tools > Template, then copy the result. -#}
+{%- set kinds = ['light','switch','climate','water_heater','media_player','camera','fan','cover','binary_sensor','alarm_control_panel'] -%}
+{%- set shown = ['door','window','garage_door','opening','motion','occupancy','presence','smoke','gas','moisture','safety'] -%}
+HOME RING INVENTORY
+
+FLOORS
+{%- for f in floors() %}
+- {{ floor_name(f) }} [{{ f }}]: {{ floor_areas(f) | map('area_name') | join(', ') or 'no rooms' }}
+{%- else %}
+- (no floors set up)
+{%- endfor %}
+
+ROOMS AND THINGS
+{%- for a in areas() %}
+{%- set things = area_entities(a) | select('match', '^(' ~ kinds | join('|') ~ ')\\.') | list %}
+{%- set fl = namespace(name='') %}
+{%- for f in floors() if a in floor_areas(f) %}{% set fl.name = floor_name(f) %}{% endfor %}
+## {{ area_name(a) }} [{{ a }}]{{ ' (floor: ' ~ fl.name ~ ')' if fl.name else ' (no floor)' }}
+{%- for e in things %}
+{%- set dc = state_attr(e, 'device_class') %}
+{%- if not e.startswith('binary_sensor.') or dc in shown %}
+- {{ e }} | {{ state_attr(e, 'friendly_name') }}{{ ' | ' ~ dc if dc else '' }}{{ ' | modes: ' ~ state_attr(e, 'operation_list') | join(', ') if e.startswith('water_heater.') else '' }}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+THINGS WITHOUT A ROOM (the ring cannot show these until they have one)
+{%- for s in states if s.domain in kinds and not area_id(s.entity_id) and (s.domain != 'binary_sensor' or s.attributes.device_class in shown) %}
+- {{ s.entity_id }} | {{ s.name }}
+{%- endfor %}
+
+DOORBELLS AND CAMERA EVENTS
+{%- for s in states.binary_sensor if 'ding' in s.entity_id or 'doorbell' in s.entity_id or 'ring' in s.entity_id %}
+- {{ s.entity_id }} | {{ s.name }}
+{%- endfor %}
+
+POWER SENSORS AND HOME-BATTERY CHARGE (for the Energy view)
+{%- for s in states.sensor if (s.attributes.device_class == 'power' and s.attributes.unit_of_measurement in ['W','kW'])
+     or (s.attributes.device_class == 'battery' and ('soc' in s.entity_id or 'state_of_charge' in s.entity_id)) %}
+- {{ s.entity_id }} | {{ s.name }} | {{ s.state }} {{ s.attributes.unit_of_measurement }}
+{%- endfor %}
+
+SCENES
+{%- for s in states.scene %}
+- {{ s.entity_id }} | {{ s.name }}
+{%- endfor %}

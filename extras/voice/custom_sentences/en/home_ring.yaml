@@ -1,0 +1,17 @@
+# Home Ring voice sentences. {area} and {floor} are Home Assistant's own lists of your rooms and floors,
+# so new rooms work without editing this file. Copy to <config>/custom_sentences/en/home_ring.yaml.
+language: en
+intents:
+  HomeRingShowHome:
+    data:
+      - sentences:
+          - "show [me] [the] (whole house|whole home|house|home) [on the ring]"
+  HomeRingShowFloor:
+    data:
+      - sentences:
+          - "show [me] [the] {floor} [on the ring]"
+  HomeRingShowArea:
+    data:
+      - sentences:
+          - "show [me] [the] {area} [on the ring]"
+          - "go to [the] {area} on the ring"
