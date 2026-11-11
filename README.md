@@ -48,6 +48,37 @@ Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there
 |---|---|---|
 | ![A room](images/room.jpg) | ![Energy view](images/by-system.jpg) | ![Phone](images/phone.jpg) |
 
+## Essentials
+
+A short checklist before you install. Most problems come from the first two.
+
+**In Home Assistant**
+
+1. **Every device needs a room.** Set it on the device's page (the pencil icon) or on the entity itself. Anything without a room is not on the ring.
+2. **Rooms should have a floor.** Rooms without one go in an "Other rooms" group. If you have no floors at all, the rooms go straight round the ring.
+3. **Sensors need to say what they detect.** Leak, smoke, door and motion sensors are sorted by their type. If one arrives without a type, open its settings and set **Show as** (for example Moisture), or it lands under Sensors instead of Safety.
+4. **Switches that are really lights.** A switch counts as a light only with "light", "lamp" or "bulb" in its name, otherwise it is a Plug. Rename it, or use **Show as → Light**.
+5. **Names.** The ring drops the room's name from the front, so "Kitchen Ceiling" in the Kitchen reads "Ceiling". Rename devices with vague names, such as a "solarcharger".
+6. **Room colours need a thermostat.** A room is tinted by its thermostat's temperature. Plain temperature sensors don't change its colour.
+7. **To leave something out, hide it** in Home Assistant, or use `exclude` in the card. Settings and diagnostic entities are left out automatically.
+
+**Installing**
+
+8. **Home Assistant 2024.4 or newer**, when floors arrived. From 2026.11, HACS is built in as the Marketplace.
+9. **Refresh after installing or updating.** Browsers and the Home Assistant app keep the old version until they reload.
+10. **A current browser:** Chrome or Edge 111+, Safari 16.4+, Firefox 113+. The Home Assistant phone apps are fine.
+
+**Using it**
+
+11. **Locking the layout and choosing corners for every screen needs an admin user.** Anyone else changes only their own browser.
+12. **Alarm:** arming from the ring only works if your alarm doesn't ask for a code to arm. Disarming always uses Home Assistant's keypad.
+13. **Doorbells** open the cameras only when they are paired in `cameras:` in the card.
+14. **Solar, battery and grid readings** need `energy:` in the card. Add `invert: true` if a reading's plus and minus run the wrong way.
+15. **Voice** ("show me the kitchen") is optional: two files to copy, a restart, and `voice_entity` in the card.
+16. **Wall tablets:** use a panel view with `height: calc(100vh - 56px)` (or `100vh - 16px` with the header hidden). On a slow tablet, set the animation speed to Instant in Customise.
+17. **Busy rooms get thin slices.** Hide what you never use to keep the ring readable.
+18. **Easiest of all:** run the template in [AI_SETUP.md](AI_SETUP.md) and give the result to an AI with its prompt. It writes your card and lists every device that still needs a room.
+
 ## Install
 
 ### HACS (recommended)
@@ -93,12 +124,10 @@ A sensor is sorted by what Home Assistant says it detects. If a leak sensor arri
 
 ## Before you start: rooms and floors
 
-The ring is only as tidy as your rooms. Every thing you want to see needs a room, either its own or its device's. Rooms should have a floor.
+The ring is only as tidy as your rooms (see [Essentials](#essentials)).
 
 - Set rooms and floors in **Settings → Areas, labels & zones**.
 - Set a device's room on the device's page (the pencil icon).
-
-Hidden entities and entities marked as configuration or diagnostic are left out automatically.
 
 **Let an AI do the setup.** [AI_SETUP.md](AI_SETUP.md) has a Home Assistant template that lists your rooms and devices, and a prompt to paste into Claude, ChatGPT or Gemini with that list. It writes your card, suggests rooms for things that don't have one, and asks about cameras, doorbells and heating.
 
@@ -260,10 +289,8 @@ The demo is one self-contained file, [`demo/index.html`](demo/index.html), so yo
 ## Good to know
 
 - **Looks:** the card has its own dark look, made for wall tablets. It doesn't follow light themes.
-- **Browsers:** it needs a current browser: Chrome or Edge 111+, Safari 16.4+, Firefox 113+. The Home Assistant apps are fine.
 - **Privacy:** the card talks only to your own Home Assistant, through the connection the dashboard already has. It sends nothing anywhere else, has no tracking, and loads nothing from the internet.
 - **Safety:** disarming the alarm always needs the code, through Home Assistant's keypad. Arming from the ring only works when your alarm doesn't ask for a code to arm.
-- **Busy rooms:** a room with dozens of things gets thin slices. Hide what you never use, either in Home Assistant or with `exclude`.
 
 ## Licence
 
