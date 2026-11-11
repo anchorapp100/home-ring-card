@@ -4,7 +4,9 @@ A Home Assistant card that shows your home as a ring you can drill into.
 
 The centre is where you are. The rings around it are your floors, then rooms, then kinds of thing (lights, heating, TV & music, doors & motion…), then the things themselves. Tap a room to go in and tap the centre to come back out. Colours show what's on, right now.
 
-![The whole house](images/home.jpg)
+![Home Ring in action: tapping into a room, dimming a light by sliding, coming back out, and the By system view](images/tour.gif)
+
+*A made-up demo house. [Try it yourself in your browser](https://anchorapp100.github.io/home-ring-card/demo/).*
 
 Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there is nothing to list by hand. **Every device with a room is on the ring.** Give a new device a room and it appears within a second or two, whatever kind of device it is.
 
