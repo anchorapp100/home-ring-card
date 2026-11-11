@@ -194,6 +194,7 @@ layout_lock: true
 | `scenes` | `true` | Scene band: `true`, `false`, or a list |
 | `hot_buttons` | `true` | The four corner buttons |
 | `corners` | `[cams, lights, alarm, heat]` | Starting choice for the corners: top left, top right, bottom left, bottom right. Kinds: `cams`, `lights`, `alarm`, `heat`, `media`, `scenes`, `doors`, `energy`, `blinds`, `fans`, `plugs`, `room:<area id>`, `none`. A choice made with Customise overrides it |
+| `animation_speed` | `100` | How fast the ring glides into a room: `0` is instant, `100` the normal 0.75 s. Each screen can change it in Customise |
 | `customise`, `corners_key` | `true`, `home_ring_corners` | Show the Customise button; name the choice is saved under |
 | `cameras` | every camera with a room | Camera stills, doorbells and motion |
 | `camera_refresh` | `2` | Seconds between stills |
@@ -216,6 +217,8 @@ Tap **Customise** in the panel. The four corners get a dashed outline. Tap one, 
 ![Choosing what a corner does](images/customise.jpg)
 
 The choice is saved in Home Assistant, like the layout lock, so every screen shows the same corners. Choosing for everyone needs an admin; anyone else changes only their own browser. To fix the corners in YAML instead, set `corners:` and `customise: false`.
+
+**Animation speed.** Before you pick a corner, Customise also shows an **Animation speed** slider. **Instant** at one end jumps straight into a room; **Normal** at the other is the full 0.75-second glide. It is saved for that screen only, so a slower wall tablet can be instant while phones keep the animation.
 
 ## Layout lock
 

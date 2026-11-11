@@ -7,7 +7,7 @@
  * slide on a light to dim it. Everything comes from Home Assistant's own floors, areas and entities, so new
  * devices appear by themselves once they have a room.
  */
-const HOME_RING_VERSION = '1.3.1';
+const HOME_RING_VERSION = '1.4.0';
 
 const HR_CSS = `
 :host{
@@ -331,6 +331,7 @@ function normaliseConfig(c) {
     corners: c.corners || null,
     corners_key: String(c.corners_key || 'home_ring_corners'),
     customise: c.customise !== false,
+    animation_speed: clamp(num(c.animation_speed) ?? 100, 0, 100),
   };
 }
 
@@ -350,6 +351,10 @@ function createRing(sr, host, CFG) {
 
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let MODE = LS.get('homeRingMode') || CFG.mode; if (MODE !== 'systems') MODE = 'rooms';
+  // animation speed, per screen: 0 = instant, 100 = the normal glide (0.75 s). Set in Customise.
+  const FULL_MS = 750;
+  let SPEED = num(LS.get('homeRingSpeed')) ?? CFG.animation_speed; SPEED = clamp(SPEED, 0, 100);
+  const animMs = () => Math.round(FULL_MS * SPEED / 100);
   const ENERGY_BY = Object.fromEntries(CFG.energy.map(e => [e.entity, e]));
 
   const navigate = p => { if (!p) return; window.history.pushState(null, '', p); window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } })); };
@@ -759,8 +764,9 @@ function createRing(sr, host, CFG) {
     focus = n; hover(null); side(); controls(); geom(n);
     const to = { x0: n.x0, x1: n.x1, d: n.depth }, from = { ...view };
     cancelAnimationFrame(anim);
-    if (REDUCED) { Object.assign(view, to); draw(); labels(); return; }
-    const t0 = performance.now(), dur = 750;
+    const dur = REDUCED ? 0 : animMs();
+    if (dur < 20) { Object.assign(view, to); draw(); labels(); return; }
+    const t0 = performance.now();
     const step = now => {
       const t = clamp((now - t0) / dur, 0, 1), e = easeIO(t);
       view.x0 = lerp(from.x0, to.x0, e); view.x1 = lerp(from.x1, to.x1, e); view.d = lerp(from.d, to.d, e); draw();
@@ -941,8 +947,9 @@ function createRing(sr, host, CFG) {
   function controls() {
     const el = $('ctl'); clearInterval(camTimer); stopCams();
     if (MINI) return;
-    $('list').style.display = sel || hot || (EDIT && editPos) ? 'none' : '';
+    $('list').style.display = sel || hot || EDIT ? 'none' : '';
     if (EDIT && editPos) { chooserCard(el); return; }
+    if (EDIT) { settingsCard(el); return; }
     if (hot && !sel) { hotCard(el); return; }
     if (!sel) { el.innerHTML = ''; return; }
     const eid = sel.eid, st = states()[eid], d = eid.split('.')[0], a = (st && st.attributes) || {}, act = isActive(eid, st);
@@ -1433,6 +1440,21 @@ function createRing(sr, host, CFG) {
     renderCorners(); controls(); hotBtns();
   }
   function pickCorner(pos) { editPos = editPos === pos ? null : pos; renderCorners(); controls(); hotBtns(); }
+  // Customise with no corner picked: what it does, and this screen's animation speed
+  function settingsCard(el) {
+    el.style.setProperty('--sc', 'var(--light)');
+    const label = v => v <= 0 ? 'instant' : v >= 100 ? 'normal (0.75 s)' : (FULL_MS * v / 100 / 1000).toFixed(2).replace(/0$/, '') + ' s';
+    el.innerHTML = `<div class="h"><i></i>Customise<button class="x" data-done="1" aria-label="Done">✕</button></div>
+      <div class="st">Tap a corner button to change what it does.</div>
+      <div class="lbl">Animation speed · this screen</div>
+      <div class="row"><span class="pv" style="min-width:auto;text-align:left">Instant</span><input type="range" min="0" max="100" step="5" value="${SPEED}" data-a="speed" aria-label="Animation speed"><span class="pv" style="min-width:auto">Normal</span></div>
+      <div class="note" id="speedv">Going into a room: ${label(SPEED)}</div>
+      <div class="row"><button class="btn" data-done="1">Done</button></div>`;
+    const r = el.querySelector('[data-a="speed"]');
+    r.oninput = () => { SPEED = +r.value; const n = el.querySelector('#speedv'); if (n) n.textContent = 'Going into a room: ' + label(SPEED); };
+    r.onchange = () => { LS.set('homeRingSpeed', String(SPEED)); buzz(); toast('Animation: ' + label(SPEED)); };
+    el.querySelectorAll('[data-done]').forEach(b => b.onclick = () => setEdit(false));
+  }
   function chooserCard(el) {
     const cur = kindOf(editPos);
     const opt = (k, label, icon, hc) => `<button class="opt${k === cur ? ' on' : ''}" style="--hc:${hc}" data-k="${esc(k)}">${svgOf(icon)}<span>${esc(label)}</span></button>`;
