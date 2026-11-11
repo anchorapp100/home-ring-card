@@ -7,7 +7,7 @@
  * slide on a light to dim it. Everything comes from Home Assistant's own floors, areas and entities, so new
  * devices appear by themselves once they have a room.
  */
-const HOME_RING_VERSION = '1.1.0';
+const HOME_RING_VERSION = '1.3.1';
 
 const HR_CSS = `
 :host{
@@ -74,6 +74,25 @@ ha-card{display:block;background:var(--bg);color:var(--text);overflow:hidden;bor
 @keyframes hrarmed{50%{box-shadow:0 0 26px -2px var(--alert);}}
 .hot:active{transform:scale(.97);} .hot:focus-visible{box-shadow:0 0 0 2px #fff;}
 .hot[hidden]{display:none;}
+.hot .hn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hot.empty{opacity:.7;}
+.hot.edit{border-style:dashed;border-color:color-mix(in srgb,var(--hc) 70%,transparent);animation:hrwiggle 1.4s ease-in-out infinite;}
+.hot.picking{animation:none;box-shadow:0 0 0 2px #fff;background:color-mix(in srgb,var(--hc) 18%,rgba(17,25,36,.94));}
+@keyframes hrwiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.2deg)}75%{transform:rotate(1.2deg)}}
+@media (prefers-reduced-motion:reduce){ .hot.edit{animation:none;} }
+#custom{display:inline-flex;align-items:center;gap:6px;} #custom[hidden]{display:none;}
+#custom svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+#custom.on{color:var(--light);}
+.seg:has(> #custom[hidden]){display:none;}
+#ctl .opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px;}
+#ctl .opt{all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;min-width:0;padding:8px 9px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line);font-size:12.5px;font-weight:750;}
+#ctl .opt span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#ctl .opt svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--hc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+#ctl .opt.on{border-color:color-mix(in srgb,var(--hc) 60%,transparent);background:color-mix(in srgb,var(--hc) 14%,transparent);}
+#ctl .opt:focus-visible{box-shadow:0 0 0 2px #fff;}
+#ctl .mrow{grid-template-columns:minmax(0,1fr) auto;}
+#ctl .link2{all:unset;cursor:pointer;min-width:0;}
+#ctl .scn2{grid-template-columns:repeat(2,minmax(0,1fr));}
 /* the side panel */
 #side{min-height:0;display:flex;flex-direction:column;gap:10px;}
 .card{background:var(--cardgrad);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px 14px;}
@@ -109,6 +128,7 @@ ha-card{display:block;background:var(--bg);color:var(--text);overflow:hidden;bor
 #ctl .note{font-size:12.5px;color:var(--muted);margin-top:12px;}
 #ctl .kvs{margin-top:10px;}
 #ctl .kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-top:1px solid rgba(255,255,255,.05);color:var(--muted);}
+#ctl button.kv{appearance:none;-webkit-appearance:none;background:none;border:0;border-top:1px solid rgba(255,255,255,.05);font:inherit;font-size:12.5px;width:100%;text-align:left;cursor:pointer;margin:0;} #ctl button.kv:hover b{text-decoration:underline;}
 #ctl .kv b{color:var(--text);font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #ctl select{width:100%;margin-top:7px;background:var(--hub);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:13px;}
 #ctl .hue{--h:0;height:28px;appearance:none;-webkit-appearance:none;border-radius:999px;background:linear-gradient(90deg,hsl(0 90% 55%),hsl(60 90% 55%),hsl(120 90% 55%),hsl(180 90% 55%),hsl(240 90% 55%),hsl(300 90% 55%),hsl(359 90% 55%));}
@@ -194,10 +214,7 @@ const HR_HTML = `
 <div id="app">
   <div id="stage">
     <div class="hots">
-      <button class="hot tl" data-h="cams" style="--hc:var(--cam)" aria-label="Cameras"><span class="hi"><svg viewBox="0 0 24 24"><path d="M3.5 8h3l1.8-2.5h7.4L17.5 8h3v11h-17z"/><circle cx="12" cy="13.2" r="3.6"/></svg>Cameras<i class="md"></i></span><span class="hv" id="hv-cams"></span></button>
-      <button class="hot tr" data-h="lights" style="--hc:var(--light)" aria-label="Lights"><span class="hi"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.5 1.1-2.1A6 6 0 0 0 12 3z"/></svg>Lights</span><span class="hv" id="hv-lights"></span></button>
-      <button class="hot bl" data-h="alarm" style="--hc:var(--media)" aria-label="Alarm"><span class="hi"><svg viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.6c0 4.6-3.2 8.2-7.5 9.4-4.3-1.2-7.5-4.8-7.5-9.4V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>Alarm</span><span class="hv" id="hv-alarm"></span></button>
-      <button class="hot br" data-h="heat" style="--hc:var(--heat)" aria-label="Heating"><span class="hi"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.2 4.5 4.8 4.5 9.4a4.5 4.5 0 0 1-9 0c0-2.2 1-3.6 2.2-4.6 0 2 .8 3.4 2.2 3.6C11.5 8.6 10.8 5.8 12 3z"/></svg>Heating</span><span class="hv" id="hv-heat"></span></button>
+      <button class="hot tl"></button><button class="hot tr"></button><button class="hot bl"></button><button class="hot br"></button>
     </div>
     <div id="ringbox"><svg id="ring" aria-label="Home ring"></svg><div id="slide"></div><div id="toast" role="status" aria-live="polite"></div></div>
     <div id="wait">Waiting for Home Assistant…</div>
@@ -210,6 +227,7 @@ const HR_HTML = `
       <div id="summary"></div>
       <div class="tools"><div class="seg" id="mode" role="group" aria-label="Arrange by"><button data-m="rooms">By room</button><button data-m="systems">By system</button></div>
         <div class="seg" id="lockseg" hidden><button id="lock" aria-pressed="false"></button><button id="tidy" hidden title="Lay the rooms out afresh and lock them there">Re-tidy</button></div>
+        <div class="seg"><button id="custom" hidden></button></div>
         <div id="legend" title="Room colour shows its thermostat's temperature: blue = cold, orange = warm">Cold<i></i>Warm</div></div>
     </div>
     <div class="card" id="ctl"></div>
@@ -239,12 +257,20 @@ const CATS = {
   heating: { name: 'Heating', sc: 'var(--heat)' },
   media:   { name: 'TV & music', sc: 'var(--media)' },
   sensors: { name: 'Doors & motion', sc: 'var(--alert)' },
+  safety:  { name: 'Safety', sc: 'var(--alert)' },
   alarm:   { name: 'Alarm', sc: 'var(--alert)' },
+  locks:   { name: 'Locks', sc: 'var(--alert)' },
   cameras: { name: 'Cameras', sc: 'var(--cam)' },
   fans:    { name: 'Fans', sc: 'var(--fan)' },
   covers:  { name: 'Blinds', sc: 'var(--fan)' },
+  valves:  { name: 'Valves', sc: 'var(--fan)' },
+  vacuums: { name: 'Vacuums', sc: 'var(--media)' },
+  sirens:  { name: 'Sirens', sc: 'var(--alert)' },
   plugs:   { name: 'Plugs', sc: 'var(--plug)' },
+  readings: { name: 'Sensors', sc: 'var(--fan)' },
+  other:   { name: 'Other', sc: 'var(--cam)' },
 };
+const NO_COUNT = ['readings', 'other'];                    // never counted in "… on" summaries
 const CAT_ORDER = Object.keys(CATS);
 CATS.power = { name: 'Power', sc: 'var(--light)' };     // energy readings only show in the By-system view
 const SYSTEMS = [
@@ -252,11 +278,18 @@ const SYSTEMS = [
   { id: 'heating', name: 'Heating', cats: ['heating', 'fans'], hue: '#e4704f' },
   { id: 'energy', name: 'Energy', cats: ['power', 'plugs'], hue: '#2fb8a6' },
   { id: 'media', name: 'TV & music', cats: ['media'], hue: '#3fbf7f' },
-  { id: 'security', name: 'Security', cats: ['alarm', 'sensors', 'cameras'], hue: '#a77cf2' },
-  { id: 'covers', name: 'Blinds', cats: ['covers'], hue: '#5b8def' },
+  { id: 'security', name: 'Security', cats: ['alarm', 'safety', 'sensors', 'locks', 'sirens', 'cameras'], hue: '#a77cf2' },
+  { id: 'covers', name: 'Blinds & valves', cats: ['covers', 'valves'], hue: '#5b8def' },
+  { id: 'other', name: 'Other', cats: ['vacuums', 'readings', 'other'], hue: '#8a97a6' },
 ];
 const ENERGY_COLOURS = { solar: 'var(--light)', battery: 'var(--plug)', battery_level: 'var(--plug)', grid: 'var(--alert)', load: 'var(--media)', other: 'var(--fan)' };
-const SENSOR_CLASSES = ['door', 'window', 'garage_door', 'opening', 'motion', 'occupancy', 'presence', 'smoke', 'gas', 'moisture', 'safety'];
+const SENSOR_CLASSES = ['door', 'window', 'garage_door', 'opening', 'motion', 'occupancy', 'presence'];
+const SAFETY_LABEL = { moisture: 'Water leak', smoke: 'Smoke', gas: 'Gas', carbon_monoxide: 'Carbon monoxide', safety: 'Safety alarm' };
+// never a thing of its own on the ring (scenes have their band; the rest is housekeeping)
+const NEVER = ['scene', 'update', 'image', 'automation', 'zone', 'person', 'device_tracker', 'tts', 'stt', 'wake_word', 'conversation',
+  'assist_satellite', 'sun', 'weather', 'calendar', 'todo', 'text', 'notify', 'ai_task', 'time', 'date', 'datetime'];
+// what a device with no ring kind is shown by (its first match), before its readings
+const PRIMARY = ['remote', 'script', 'button', 'input_button', 'select', 'input_select', 'number', 'input_number'];
 const FLOOR_HUES = ['#5b8def', '#a77cf2', '#2fb8a6', '#e0a33a', '#e46f8f'];
 const RING_WT = { floor: 1, area: 1.12, cat: 0.82, ent: 1.08 };
 const HOLD_MS = 480, MOVE_PX = 10, SLIDE_PX = 2.2;      // a 220 px slide covers 0-100 %
@@ -291,8 +324,13 @@ function normaliseConfig(c) {
     comfort: num(c.comfort_temperature) ?? 20.5,
     span: Math.max(0.5, num(c.temperature_span) ?? 4),
     motion_pulse: c.motion_pulse !== false,
+    devices: c.devices !== false,
+    safety_alerts: c.safety_alerts !== false,
     layout_lock: c.layout_lock !== false,
     layout_key: String(c.layout_key || 'home_ring_layout'),
+    corners: c.corners || null,
+    corners_key: String(c.corners_key || 'home_ring_corners'),
+    customise: c.customise !== false,
   };
 }
 
@@ -314,7 +352,7 @@ function createRing(sr, host, CFG) {
   let MODE = LS.get('homeRingMode') || CFG.mode; if (MODE !== 'systems') MODE = 'rooms';
   const ENERGY_BY = Object.fromEntries(CFG.energy.map(e => [e.entity, e]));
 
-  const navigate = p => { if (!p) return; history.pushState(null, '', p); window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } })); };
+  const navigate = p => { if (!p) return; window.history.pushState(null, '', p); window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } })); };
   const moreInfo = eid => { if (eid) host.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: eid }, bubbles: true, composed: true })); };
 
   /* ---------- what goes in the ring ---------- */
@@ -329,8 +367,14 @@ function createRing(sr, host, CFG) {
     if (d === 'camera') return 'cameras';
     if (d === 'fan') return 'fans';
     if (d === 'cover') return 'covers';
-    if (d === 'binary_sensor' && SENSOR_CLASSES.includes(a.device_class)) return 'sensors';
+    if (d === 'binary_sensor') return SAFETY_LABEL[a.device_class] ? 'safety' : SENSOR_CLASSES.includes(a.device_class) ? 'sensors' : null;
     if (d === 'alarm_control_panel') return 'alarm';
+    if (d === 'lock') return 'locks';
+    if (d === 'valve') return 'valves';
+    if (d === 'vacuum' || d === 'lawn_mower') return 'vacuums';
+    if (d === 'siren') return 'sirens';
+    if (d === 'humidifier') return 'heating';
+    if (d === 'input_boolean') return 'other';
     return null;
   }
   function watts(eid, st) {
@@ -349,6 +393,9 @@ function createRing(sr, host, CFG) {
     if (d === 'camera') return false;
     if (d === 'alarm_control_panel') return !['disarmed', 'unavailable', 'unknown'].includes(s);
     if (d === 'sensor') { const w = watts(eid, st); return w != null && Math.abs(w) >= 40; }
+    if (d === 'lock') return ['unlocked', 'open', 'opening', 'unlocking', 'jammed'].includes(s);
+    if (d === 'valve') return s === 'open' || s === 'opening';
+    if (d === 'vacuum' || d === 'lawn_mower') return ['cleaning', 'mowing', 'returning'].includes(s);
     return s === 'on';
   }
   const unavail = st => !st || st.state === 'unavailable' || st.state === 'unknown';
@@ -360,6 +407,10 @@ function createRing(sr, host, CFG) {
     if (d === 'climate') return (a.current_temperature != null ? a.current_temperature + '°' : '') + (a.temperature != null ? ' → ' + a.temperature + '°' : '') + (a.hvac_action === 'heating' ? ' · heating' : a.hvac_action === 'cooling' ? ' · cooling' : '');
     if (d === 'media_player') return s === 'playing' ? (a.media_title || 'playing') : s;
     if (d === 'alarm_control_panel') return s.replace(/_/g, ' ');
+    if (d === 'lock' || d === 'valve' || d === 'vacuum' || d === 'lawn_mower') return nice(s);
+    if (d === 'button' || d === 'input_button') return isFinite(Date.parse(s)) ? 'pressed ' + hhmm(s) : 'never pressed';
+    if (d === 'event') return isFinite(Date.parse(s)) ? nice(a.event_type || 'event') + ' · ' + hhmm(s) : 'nothing yet';
+    if (d === 'number' || d === 'input_number') return s + (a.unit_of_measurement ? ' ' + a.unit_of_measurement : '');
     if (d === 'binary_sensor') { const open = ['door', 'window', 'garage_door', 'opening'].includes(a.device_class); return s === 'on' ? (open ? 'open' : 'detected') : (open ? 'closed' : 'clear'); }
     if (d === 'sensor') {
       const v = num(s), u = a.unit_of_measurement || ''; if (v == null) return s;
@@ -370,13 +421,16 @@ function createRing(sr, host, CFG) {
         if (kind === 'battery') return m < 40 ? 'idle' : (w > 0 ? 'charging ' : 'discharging ') + t;
         return t;
       }
-      return Math.round(v) + (u === '%' ? '%' : ' ' + u);
+      if (a.device_class === 'timestamp') return isFinite(Date.parse(s)) ? hhmm(s) : s;
+      const r = Math.abs(v) >= 100 || Number.isInteger(v) ? Math.round(v) : Math.round(v * 10) / 10;
+      return r + (u === '%' ? '%' : u ? ' ' + u : '');
     }
+    if (a.device_class === 'timestamp' && isFinite(Date.parse(s))) return hhmm(s);
     return s;
   }
   const STRIP = CFG.strip_prefixes.length ? new RegExp('^(' + CFG.strip_prefixes.map(escRe).join('|') + ')\\s+', 'i') : null;
-  function shortName(st, eid, area) {
-    let n = (st && st.attributes && st.attributes.friendly_name) || eid.split('.')[1].replace(/_/g, ' ');
+  function shortName(st, eid, area, text) {
+    let n = text || (st && st.attributes && st.attributes.friendly_name) || eid.split('.')[1].replace(/_/g, ' ');
     if (STRIP) n = n.replace(STRIP, '');
     if (area) {          // "Kitchen Ceiling" in the Kitchen is just "Ceiling" (but "Utility Room" never becomes "Room")
       const re = new RegExp('^' + escRe(area).replace(/s\b/gi, "'?s") + '\\s+', 'i'), m = n.replace(re, '');
@@ -394,7 +448,7 @@ function createRing(sr, host, CFG) {
      and the ring turns slightly so the rooms you know stay where they were. */
   const nodeKey = n => n.kind === 'home' ? 'h' : n.kind === 'floor' ? 'f:' + (n.id ?? '_') : n.kind === 'area' ? 'a:' + n.id : n.kind === 'cat' ? 'c:' + n.cat : 'e:' + n.eid;
   const pathKey = n => n.parent ? pathKey(n.parent) + '/' + nodeKey(n) : nodeKey(n);
-  let LAYOUT = null, layoutShared = null, unsubLayout = null, layoutStarted = false;
+  let LAYOUT = null;
   function applyLock(n, order) {
     if (!n.kids.length) return;
     const saved = order[pathKey(n)];
@@ -416,7 +470,7 @@ function createRing(sr, host, CFG) {
     for (const a of Object.keys(areas)) { const ar = areas[a]; if (CFG.exclude_areas.includes(String(a).toLowerCase()) || CFG.exclude_areas.includes(String(ar.name).toLowerCase())) delete areas[a]; }
     areas._energy = { area_id: '_energy', name: 'Energy system', floor_id: null };
     const flist = Object.values(floors).sort((a, b) => (a.level ?? 99) - (b.level ?? 99) || String(a.name).localeCompare(b.name));
-    const byArea = {}, tempBy = {};
+    const byArea = {}, tempBy = {}, devShown = new Set(), left = {};
     const areaOf = r => r && (r.area_id || (r.device_id && devices[r.device_id] && devices[r.device_id].area_id));
     for (const eid in states) {
       const r = ents[eid]; if (!r) continue;                 // only things in the entity registry have rooms
@@ -427,8 +481,24 @@ function createRing(sr, host, CFG) {
       if (!area || !areas[area]) continue;
       // a room's temperature = its thermostat (other temperature sensors are often batteries or device chips)
       if (eid.startsWith('climate.') && !tempBy[area] && num((st.attributes || {}).current_temperature) != null) tempBy[area] = eid;
-      const c = catOf(eid, st); if (!c) continue;
-      (byArea[area] = byArea[area] || []).push({ eid, c });
+      const c = catOf(eid, st);
+      if (c) { if (r.device_id) devShown.add(r.device_id); (byArea[area] = byArea[area] || []).push({ eid, c }); continue; }
+      // no ring kind of its own: it belongs to its device (or stands alone if it has none)
+      if (!CFG.devices || NEVER.includes(eid.split('.')[0])) continue;
+      const key = r.device_id || '~' + eid; (left[key] = left[key] || { area, eids: [] }).eids.push(eid);
+    }
+    // every device with a room is on the ring: one slice for a device that has nothing on it yet, shown by its most
+    // useful entity, with the rest as readings on its card. A device already on the ring carries its extras the same way.
+    READ = {};
+    for (const key in left) {
+      const L = left[key], dev = key[0] === '~' ? null : devices[key];
+      if (dev && devShown.has(key)) { READ[key] = L.eids; continue; }
+      const devName = dev ? (dev.name_by_user || dev.name || '') : '';
+      if (dev && devName && CFG.exclude('', devName)) continue;
+      const primary = pickPrimary(L.eids, states); if (!primary) continue;
+      const c = L.eids.every(e => /^(sensor|binary_sensor|event)\./.test(e)) ? 'readings' : 'other';
+      (byArea[L.area] = byArea[L.area] || []).push({ eid: primary, c, dev: dev ? key : null, devName });
+      if (dev) READ[key] = L.eids;
     }
     const sysMode = MODE === 'systems' && !MINI;
     if (sysMode) for (const e of CFG.energy) {
@@ -439,8 +509,8 @@ function createRing(sr, host, CFG) {
     const mk = (kind, name, extra) => Object.assign({ kind, name, kids: [], parent: null }, extra || {});
     const entNode = (x, a, hue) => {
       const e = x.c === 'power' ? ENERGY_BY[x.eid] : null;
-      return mk('ent', e && e.name ? e.name : shortName(states[x.eid], x.eid, areas[a].name),
-        { hue, cat: x.c, sc: e ? (e.color || ENERGY_COLOURS[e.kind] || ENERGY_COLOURS.other) : CATS[x.c].sc, eid: x.eid });
+      return mk('ent', e && e.name ? e.name : shortName(states[x.eid], x.eid, areas[a].name, x.devName),
+        { hue, cat: x.c, sc: e ? (e.color || ENERGY_COLOURS[e.kind] || ENERGY_COLOURS.other) : CATS[x.c].sc, eid: x.eid, dev: x.dev || null });
     };
     const R = mk('home', 'Home');
     const byName = (a, b) => areas[a].name.localeCompare(areas[b].name);
@@ -502,6 +572,18 @@ function createRing(sr, host, CFG) {
     return R;
   }
   const leaves = n => n.kind === 'ent' ? [n] : n.kids.flatMap(leaves);
+  let READ = {};                                          // device id -> its entities that are not on the ring
+  function pickPrimary(eids, states) {
+    for (const d of PRIMARY) { const e = eids.find(x => x.startsWith(d + '.')); if (e) return e; }
+    const ok = x => states[x] && !unavail(states[x]);
+    const cls = c => eids.find(x => x.startsWith('sensor.') && ok(x) && (states[x].attributes || {}).device_class === c && num(states[x].state) != null);
+    // a room sensor (temperature with humidity, or just a few readings) is best shown by its temperature;
+    // bigger kit (inverters, chargers, batteries) by its power, then its charge
+    const climate = cls('humidity') || eids.length <= 4;
+    return (climate && cls('temperature')) || cls('power') || cls('battery') || cls('temperature') || cls('humidity') || eids.find(x => x.startsWith('binary_sensor.') && ok(x))
+      || eids.find(x => x.startsWith('sensor.') && ok(x) && num(states[x].state) != null) || eids.find(x => !x.startsWith('event.') && ok(x)) || eids[0];
+  }
+  const devOf = n => n.dev || ((H && H.entities && H.entities[n.eid]) || {}).device_id || null;
   const findSame = n => n && nodes.find(m => m.kind === n.kind && m.name === n.name && (m.eid || m.id || '') === (n.eid || n.id || '') && (m.parent && n.parent ? m.parent.name === n.parent.name : true));
 
   /* ---------- geometry + drawing ---------- */
@@ -586,7 +668,7 @@ function createRing(sr, host, CFG) {
     if (n.kind === 'ent') return stateText(n.eid, states()[n.eid]);
     const on = activeCount(n);
     if (n.kind === 'cat') return on ? on + ' on' : '';
-    const parts = CAT_ORDER.map(c => { const k = leaves(n).filter(e => e.cat === c && isActive(e.eid, states()[e.eid])).length; return k ? k + ' ' + CATS[c].name.toLowerCase() : null; }).filter(Boolean);
+    const parts = CAT_ORDER.filter(c => !NO_COUNT.includes(c)).map(c => { const k = leaves(n).filter(e => e.cat === c && isActive(e.eid, states()[e.eid])).length; return k ? k + ' ' + CATS[c].name.toLowerCase() : null; }).filter(Boolean);
     const t = n.kind === 'area' ? roomTemp(n) : null;
     return [t != null ? deg(t) : null, ...parts.slice(0, 2)].filter(Boolean).join(' · ');
   }
@@ -700,7 +782,7 @@ function createRing(sr, host, CFG) {
   /* ---------- gestures: tap = go there (a thing: its card), hold = on/off, slide up/down on a light = brightness ---------- */
   let press = null;
   const domOf = n => n.eid.split('.')[0];
-  const canToggle = n => n && n.kind === 'ent' && ['light', 'switch', 'fan', 'media_player'].includes(domOf(n)) && !unavail(states()[n.eid]);
+  const canToggle = n => n && n.kind === 'ent' && ['light', 'switch', 'fan', 'media_player', 'input_boolean'].includes(domOf(n)) && !unavail(states()[n.eid]);
   const canDim = n => { if (!n || n.kind !== 'ent' || domOf(n) !== 'light') return false; const st = states()[n.eid]; return !unavail(st) && ((st.attributes || {}).supported_color_modes || []).some(m => m !== 'onoff'); };
   const briOf = n => { const st = states()[n.eid], a = (st && st.attributes) || {}; return st && st.state === 'on' ? (a.brightness != null ? Math.round(a.brightness / 2.55) : 100) : 0; };
   function select(n) { sel = n; hot = null; nodes.forEach(paint); controls(); hotBtns(); }
@@ -739,6 +821,21 @@ function createRing(sr, host, CFG) {
       const was = motionSeen[e.eid]; motionSeen[e.eid] = st.last_changed;
       if (quiet || was === undefined || was === st.last_changed || st.state !== 'on') continue;
       for (let c = e; c; c = c.parent) if (c === e || c.kind === 'area') pulse(c);
+    }
+  }
+  // safety: a leak, smoke, gas or CO sensor going off flashes its room and opens its card
+  let safeSeen = {};
+  function safetyCheck(h, quiet) {
+    if (!root) return;
+    for (const e of leaves(root)) {
+      if (e.cat !== 'safety') continue;
+      const st = h.states[e.eid]; if (!st) continue;
+      const was = safeSeen[e.eid]; safeSeen[e.eid] = st.last_changed;
+      if (quiet || !CFG.safety_alerts || MINI || was === undefined || was === st.last_changed || st.state !== 'on') continue;
+      for (let c = e; c; c = c.parent) if (c === e || c.kind === 'area') pulse(c);
+      sel = e; hot = null; nodes.forEach(paint); controls(); hotBtns();
+      try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (x) {}
+      toast((SAFETY_LABEL[(st.attributes || {}).device_class] || 'Alarm') + ' · ' + roomName(e));
     }
   }
   function showSlide(n, v) { const o = $('slide'); o.style.display = 'grid'; o.innerHTML = `<div><b>${v}%</b><span>${esc(n.name)}</span></div>`; o.style.setProperty('--p', v); }
@@ -804,7 +901,7 @@ function createRing(sr, host, CFG) {
     if (MINI) return miniBox();
     crumbs();
     $('title').textContent = focus.name;
-    const L = leaves(focus), on = CAT_ORDER.map(c => { const k = L.filter(e => e.cat === c && isActive(e.eid, states()[e.eid])).length; return k ? `<b>${k}</b> ${esc(CATS[c].name.toLowerCase())}` : null; }).filter(Boolean);
+    const L = leaves(focus), on = CAT_ORDER.filter(c => !NO_COUNT.includes(c)).map(c => { const k = L.filter(e => e.cat === c && isActive(e.eid, states()[e.eid])).length; return k ? `<b>${k}</b> ${esc(CATS[c].name.toLowerCase())}` : null; }).filter(Boolean);
     const off = L.filter(e => unavail(states()[e.eid])).length;
     $('summary').innerHTML = (on.length ? on.join(' · ') + ' on' : 'Nothing on') + ` · ${L.length} thing${L.length === 1 ? '' : 's'}` + (off ? ` · <span style="color:var(--alert)">${off} unavailable</span>` : '');
     $('mode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === MODE));
@@ -829,7 +926,7 @@ function createRing(sr, host, CFG) {
 
   /* ---------- the detailed card for one thing (replaces the room list until closed) ---------- */
   const HIST = {};
-  async function history(eid, minimal) {               // last 24 h, cached 5 min
+  async function fetchHistory(eid, minimal) {               // last 24 h, cached 5 min
     const k = eid + (minimal ? '|m' : ''), c = HIST[k]; if (c && Date.now() - c.t < 300000) return c.v;
     const start = encodeURIComponent(new Date(Date.now() - 864e5).toISOString());
     let v = [];
@@ -844,7 +941,8 @@ function createRing(sr, host, CFG) {
   function controls() {
     const el = $('ctl'); clearInterval(camTimer); stopCams();
     if (MINI) return;
-    $('list').style.display = sel || hot ? 'none' : '';
+    $('list').style.display = sel || hot || (EDIT && editPos) ? 'none' : '';
+    if (EDIT && editPos) { chooserCard(el); return; }
     if (hot && !sel) { hotCard(el); return; }
     if (!sel) { el.innerHTML = ''; return; }
     const eid = sel.eid, st = states()[eid], d = eid.split('.')[0], a = (st && st.attributes) || {}, act = isActive(eid, st);
@@ -869,7 +967,7 @@ function createRing(sr, host, CFG) {
       if ((a.effect_list || []).length && a.effect_list.length <= 60)
         h += `<div class="lbl">Effect</div><select data-a="effect"><option value="">—</option>${a.effect_list.map(x => `<option${x === a.effect ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
       h += `<div class="kvs">${kv('Colour mode', a.color_mode && esc(nice(a.color_mode)))}</div>`;
-    } else if (d === 'switch' || d === 'fan') {
+    } else if (d === 'switch' || d === 'fan' || d === 'input_boolean' || d === 'remote') {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="toggle">${act ? 'Turn off' : 'Turn on'}</button>
         ${d === 'fan' && a.percentage != null ? `<input type="range" min="0" max="100" step="${a.percentage_step || 1}" value="${a.percentage || 0}" data-a="fanpct" aria-label="Fan speed"><span class="pv">${a.percentage || 0}%</span>` : ''}</div>`;
     } else if (d === 'climate') {
@@ -892,6 +990,30 @@ function createRing(sr, host, CFG) {
     } else if (d === 'cover') {
       h += `<div class="row"><button class="btn" data-a="open">Open</button><button class="btn" data-a="stop">Stop</button><button class="btn" data-a="shut">Close</button></div>`;
       if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${a.current_position}" data-a="pos" aria-label="Position"><span class="pv">${a.current_position}%</span></div>`;
+    } else if (d === 'lock') {
+      const locked = st.state === 'locked';
+      h += `<div class="row"><button class="btn${locked ? ' on' : ''}" data-a="lock">Lock</button><button class="btn" data-a="confirm" data-v="unlock">Unlock…</button>${a.supported_features & 1 ? '<button class="btn" data-a="confirm" data-v="open">Open…</button>' : ''}</div>
+        <div class="note">Unlocking asks you to tap twice${a.code_format ? ', and your lock needs its code: use More controls' : ''}.</div>`;
+    } else if (d === 'valve') {
+      h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="vopen">Open</button><button class="btn" data-a="vclose">Close</button>${a.current_position != null ? '<button class="btn" data-a="vstop">Stop</button>' : ''}</div>`;
+      if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${a.current_position}" data-a="vpos" aria-label="Position"><span class="pv">${a.current_position}%</span></div>`;
+    } else if (d === 'vacuum' || d === 'lawn_mower') {
+      h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="vstart">Start</button><button class="btn" data-a="vpause">Pause</button><button class="btn" data-a="vdock">Dock</button></div>
+        <div class="kvs">${kv('Battery', a.battery_level != null ? esc(a.battery_level) + '%' : null)}${kv('Fan speed', a.fan_speed ? esc(a.fan_speed) : null)}</div>`;
+    } else if (d === 'siren') {
+      h += `<div class="row">${act ? '<button class="btn on" data-a="sirenoff">Turn off</button>' : '<button class="btn" data-a="confirm" data-v="siren">Sound it…</button>'}</div>`;
+    } else if (d === 'humidifier') {
+      h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="toggle">${act ? 'Turn off' : 'Turn on'}</button>
+        ${a.humidity != null ? `<input type="range" min="${a.min_humidity ?? 0}" max="${a.max_humidity ?? 100}" step="1" value="${a.humidity}" data-a="hum" aria-label="Target humidity"><span class="pv">${a.humidity}%</span>` : ''}</div>
+        <div class="kvs">${kv('Humidity now', a.current_humidity != null ? esc(a.current_humidity) + '%' : null)}${kv('Mode', a.mode ? esc(nice(a.mode)) : null)}</div>`;
+    } else if (d === 'button' || d === 'input_button') {
+      h += `<div class="row"><button class="btn" data-a="press">Press</button></div>`;
+    } else if (d === 'script') {
+      h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="run">${act ? 'Running…' : 'Run'}</button></div>`;
+    } else if ((d === 'select' || d === 'input_select') && (a.options || []).length <= 60) {
+      h += `<select data-a="opt">${(a.options || []).map(x => `<option${x === st.state ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+    } else if ((d === 'number' || d === 'input_number') && a.min != null && a.max != null) {
+      h += `<div class="row"><input type="range" min="${a.min}" max="${a.max}" step="${a.step || 1}" value="${esc(st.state)}" data-a="num" aria-label="${esc(sel.name)}"><span class="pv">${esc(st.state)}${a.unit_of_measurement ? ' ' + esc(a.unit_of_measurement) : ''}</span></div>`;
     } else if (d === 'alarm_control_panel') {
       h += `<div class="row"><button class="btn" data-a="more">Open the keypad</button></div>`;
     } else if (d === 'camera' && a.entity_picture) {
@@ -899,16 +1021,34 @@ function createRing(sr, host, CFG) {
       camTimer = setInterval(() => { const i = $('cam'), s2 = states()[eid]; if (i && sel && sel.eid === eid && s2) i.src = withT(s2.attributes.entity_picture); }, 5000);
     } else if (d === 'binary_sensor') {
       h += `<div class="kvs" id="bsh">${kv('Since', st.last_changed ? hhmm(st.last_changed) : null)}</div>`;
-    } else if (d === 'sensor') {
-      h += `<div class="row"><button class="btn" data-a="more">History</button></div>`;
+    }
+    h += readingsHtml(sel);
+    // Home Assistant's own pop-up has the right controls for every kind of device, including ones this card has no buttons for
+    if (d !== 'alarm_control_panel' && d !== 'camera') {
+      const dev = devOf(sel), admin = H.user && H.user.is_admin;
+      h += `<div class="row"><button class="btn" data-a="more">${/^(sensor|binary_sensor|event)$/.test(d) ? 'History' : 'More controls'}</button>${dev && admin ? '<button class="btn" data-a="devpage">Device page</button>' : ''}</div>`;
     }
     el.innerHTML = h;
     wire(el, eid, d, a);
-    if (d === 'climate') history(eid, false).then(v => { if (sel && sel.eid === eid) drawGraph(v); });
-    if (d === 'binary_sensor') history(eid, true).then(v => {
+    el.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => moreInfo(b.dataset.mi));
+    if (d === 'climate') fetchHistory(eid, false).then(v => { if (sel && sel.eid === eid) drawGraph(v); });
+    if (d === 'binary_sensor') fetchHistory(eid, true).then(v => {
       if (!(sel && sel.eid === eid)) return; const n = v.filter((s, i) => s.state === 'on' && i > 0).length;
       const b = $('bsh'); if (b) b.innerHTML += kv('Last 24 hours', n + ' time' + (n === 1 ? '' : 's'));
     });
+  }
+  // the rest of a device: its readings and extra controls, each opening Home Assistant's own pop-up
+  function readingsHtml(n) {
+    const dev = devOf(n), L = ((dev && READ[dev]) || []).filter(x => x !== n.eid && states()[x]); if (!L.length) return '';
+    const D = dev && H.devices && H.devices[dev], dn = D ? (D.name_by_user || D.name || '') : '';
+    const label = x => { let t = (states()[x].attributes || {}).friendly_name || x.split('.')[1].replace(/_/g, ' ');
+      if (dn && t.toLowerCase().startsWith(dn.toLowerCase() + ' ')) t = t.slice(dn.length + 1); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const rank = x => { const d = x.split('.')[0], c = (states()[x].attributes || {}).device_class || ''; return (d === 'sensor' ? (['power', 'temperature', 'humidity', 'energy', 'battery'].indexOf(c) + 1 || 6) : d === 'binary_sensor' ? 7 : 8); };
+    const rows = L.slice().sort((p, q) => rank(p) - rank(q) || label(p).localeCompare(label(q)));
+    const MAX = 14;
+    return `<div class="lbl">${n.dev ? 'Readings' : 'Also on this device'}</div><div class="kvs">` +
+      rows.slice(0, MAX).map(x => `<button class="kv kvb" data-mi="${esc(x)}"><span>${esc(label(x))}</span><b>${esc(stateText(x, states()[x]))}</b></button>`).join('') + '</div>' +
+      (rows.length > MAX ? `<div class="note">and ${rows.length - MAX} more on the device page</div>` : '');
   }
   const withT = p => /^(data|blob):/.test(p) ? p : p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // fresh still each time
   function wire(el, eid, d, a) {
@@ -924,6 +1064,9 @@ function createRing(sr, host, CFG) {
           if (k === 'fanpct') call('fan', 'set_percentage', { entity_id: eid, percentage: +b.value });
           if (k === 'vol') call('media_player', 'volume_set', { entity_id: eid, volume_level: +b.value / 100 });
           if (k === 'pos') call('cover', 'set_cover_position', { entity_id: eid, position: +b.value });
+          if (k === 'vpos') call('valve', 'set_valve_position', { entity_id: eid, position: +b.value });
+          if (k === 'hum') call('humidifier', 'set_humidity', { entity_id: eid, humidity: +b.value });
+          if (k === 'num') call(d, 'set_value', { entity_id: eid, value: +b.value });
         };
         return;
       }
@@ -932,12 +1075,27 @@ function createRing(sr, host, CFG) {
           if (!b.value) return;
           if (k === 'effect') call('light', 'turn_on', { entity_id: eid, effect: b.value });
           if (k === 'source') call('media_player', 'select_source', { entity_id: eid, source: b.value });
+          if (k === 'opt') call(d, 'select_option', { entity_id: eid, option: b.value });
         };
         return;
       }
       b.onclick = () => {
         if (k === 'close') { sel = null; nodes.forEach(paint); controls(); return; }
         if (k === 'more') { moreInfo(eid); return; }
+        if (k === 'devpage') { navigate('/config/devices/device/' + devOf(sel)); return; }
+        if (k === 'confirm') {                   // unlocking a door or sounding a siren takes a second tap within 4 s
+          if (!b.dataset.armed || Date.now() - +b.dataset.armed > 4000) { b.dataset.armed = Date.now(); b.textContent = 'Tap again to ' + (v === 'siren' ? 'sound it' : v); b.classList.add('on'); buzz(); return; }
+          if (v === 'unlock') call('lock', 'unlock', { entity_id: eid });
+          if (v === 'open') call('lock', 'open', { entity_id: eid });
+          if (v === 'siren') call('siren', 'turn_on', { entity_id: eid });
+          delete b.dataset.armed; buzz(); toast(sel.name + ': ' + (v === 'siren' ? 'sounding' : v === 'open' ? 'opening' : 'unlocking')); return;
+        }
+        if (k === 'lock') call('lock', 'lock', { entity_id: eid });
+        if (k === 'sirenoff') call('siren', 'turn_off', { entity_id: eid });
+        if (k === 'vopen' || k === 'vclose' || k === 'vstop') call('valve', { vopen: 'open_valve', vclose: 'close_valve', vstop: 'stop_valve' }[k], { entity_id: eid });
+        if (k === 'vstart' || k === 'vpause' || k === 'vdock') call(d, d === 'lawn_mower' ? { vstart: 'start_mowing', vpause: 'pause', vdock: 'dock' }[k] : { vstart: 'start', vpause: 'pause', vdock: 'return_to_base' }[k], { entity_id: eid });
+        if (k === 'press') { call(d, 'press', { entity_id: eid }); buzz(); }
+        if (k === 'run') { call('script', 'turn_on', { entity_id: eid }); buzz(); }
         if (k === 'toggle') call(d, 'toggle', { entity_id: eid });
         if (k === 'hs') call('light', 'turn_on', { entity_id: eid, hs_color: [+v, 100] });
         if (k === 'white') call('light', 'turn_on', { entity_id: eid, ...(a.min_color_temp_kelvin ? { color_temp_kelvin: Math.round((a.min_color_temp_kelvin + a.max_color_temp_kelvin) / 2) } : { hs_color: [0, 0] }) });
@@ -973,11 +1131,50 @@ function createRing(sr, host, CFG) {
   }
   if (CFG.back_path) { const b = $('back'); b.hidden = false; b.textContent = '← ' + CFG.back_label; b.onclick = () => navigate(CFG.back_path); }
 
-  /* ---------- hot buttons (corners): tap = its card on the right, hold = its quick action ----------
-     Cameras: stills of your cameras; opens by itself when a doorbell rings, closes again after a minute.
-     Lights:  every light; hold = all off if any is on, otherwise all on.
-     Alarm:   arm from here (when your alarm needs no code to arm); disarming always goes through HA's keypad.
-     Heating: every thermostat -/+, and your boiler or water heater's modes (hold = the mode you choose). */
+  /* ---------- corner buttons: tap = its card on the right, hold = its quick action ----------
+     Each corner can be any of the kinds below, a room shortcut ("room:<area id>"), or empty. Choose them with
+     Customise in the panel (saved in Home Assistant for every screen) or with `corners:` in the card's YAML.
+     Cameras: stills; opens by itself when a doorbell rings.   Lights: every light; hold = all off, or all on.
+     Alarm: arm from here when no code is needed to arm.         Heating: thermostats -/+ and boiler modes; hold = your mode.
+     TV & music: what's playing; hold = pause everything.        Scenes: run one.
+     Doors & motion: what's open and recent movement.            Energy: your power readings and plugs.
+     Blinds: open / stop / close; hold = close all, or open all. Fans: hold = all off.   Plugs: switch them. */
+  const IC = {
+    cams: '<path d="M3.5 8h3l1.8-2.5h7.4L17.5 8h3v11h-17z"/><circle cx="12" cy="13.2" r="3.6"/>',
+    lights: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.5 1.1-2.1A6 6 0 0 0 12 3z"/>',
+    alarm: '<path d="M12 3l7.5 3v5.6c0 4.6-3.2 8.2-7.5 9.4-4.3-1.2-7.5-4.8-7.5-9.4V6z"/><path d="M9 12l2.2 2.2L15.5 10"/>',
+    heat: '<path d="M12 3c1 3.2 4.5 4.8 4.5 9.4a4.5 4.5 0 0 1-9 0c0-2.2 1-3.6 2.2-4.6 0 2 .8 3.4 2.2 3.6C11.5 8.6 10.8 5.8 12 3z"/>',
+    media: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M10.5 8.8v4.8l4-2.4z"/>',
+    scenes: '<path d="M11 3l1.8 4.7L17.5 9.5l-4.7 1.8L11 16l-1.8-4.7L4.5 9.5l4.7-1.8z"/><path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+    doors: '<path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21M4 21h16"/><circle cx="14.6" cy="12" r=".9"/>',
+    energy: '<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>',
+    blinds: '<path d="M4 4h16M5 4v10M19 4v10M5 7.5h14M5 11h14M5 14h14M12 14v3.5"/><circle cx="12" cy="19.2" r="1.3"/>',
+    fans: '<circle cx="12" cy="12" r="1.8"/><path d="M12 10.2c-1-3.6.4-6.7 3-6.7 2.4 0 2.6 3.6-1.3 6.3M13.8 12.6c3.6 1 5.6 3.8 4.3 6-1.2 2.1-4.3.4-5.4-4M10.3 12.9c-2.6 2.7-6 3-7.3.8-1.2-2.1 1.9-3.9 6.3-2.8"/>',
+    plugs: '<path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0zM12 17v4"/>',
+    room: '<path d="M3.5 11.5L12 4l8.5 7.5M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>',
+    none: '<path d="M12 6v12M6 12h12"/>',
+    pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  };
+  const svgOf = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k] || IC.none}</svg>`;
+  const KINDS = {
+    cams: { name: 'Cameras', hc: 'var(--cam)' }, lights: { name: 'Lights', hc: 'var(--light)' },
+    alarm: { name: 'Alarm', hc: 'var(--media)' }, heat: { name: 'Heating', hc: 'var(--heat)' },
+    media: { name: 'TV & music', hc: 'var(--media)' }, scenes: { name: 'Scenes', hc: 'var(--light)' },
+    doors: { name: 'Doors & motion', hc: 'var(--alert)' }, energy: { name: 'Energy', hc: 'var(--plug)' },
+    blinds: { name: 'Blinds', hc: 'var(--fan)' }, fans: { name: 'Fans', hc: 'var(--fan)' },
+    plugs: { name: 'Plugs', hc: 'var(--plug)' }, none: { name: 'Empty', hc: 'var(--dim)' },
+  };
+  const POS = ['tl', 'tr', 'bl', 'br'], POS_NAME = { tl: 'Top left', tr: 'Top right', bl: 'Bottom left', br: 'Bottom right' };
+  const DEFAULT_CORNERS = ['cams', 'lights', 'alarm', 'heat'];
+  const validCorner = k => typeof k === 'string' && (KINDS[k] || /^room:.+/.test(k));
+  const cleanCorners = v => Array.isArray(v) && v.length === 4 && v.every(validCorner) ? v.slice() : null;
+  let CORNERS = cleanCorners(CFG.corners) || DEFAULT_CORNERS.slice(), EDIT = false, editPos = null;
+  const kindOf = pos => CORNERS[POS.indexOf(pos)];
+  const roomIdOf = k => k.startsWith('room:') ? k.slice(5) : null;
+  const roomNodeOf = id => nodes.find(n => n.kind === 'area' && n.id === id);
+  const roomTitle = id => { const n = roomNodeOf(id); return n ? n.name : ((H && H.areas && H.areas[id]) || {}).name || 'Room'; };
+  const kindName = k => roomIdOf(k) ? roomTitle(roomIdOf(k)) : (KINDS[k] || KINDS.none).name;
+
   let hotCam = null, hotAuto = null, camTimers = [], dingSeen = {}, pend = {};
   const roomName = e => { for (let c = e; c; c = c.parent) if (c.kind === 'area') return c.name; return e.name; };
   const areaNodeOf = e => { for (let c = e; c; c = c.parent) if (c.kind === 'area') return c; return null; };
@@ -985,6 +1182,14 @@ function createRing(sr, host, CFG) {
   const heaterEid = () => CFG.heating_entity || (root ? (leaves(root).find(e => domOf(e) === 'water_heater') || {}).eid : null);
   const thermostats = () => root ? leaves(root).filter(e => domOf(e) === 'climate').sort((a, b) => roomName(a).localeCompare(roomName(b))) : [];
   const allLights = () => root ? roomLights(root) : [];
+  const ofCat = c => root ? leaves(root).filter(e => e.cat === c && !unavail(states()[e.eid])) : [];
+  const onOf = L => L.filter(e => isActive(e.eid, states()[e.eid]));
+  const OPENING = ['door', 'window', 'garage_door', 'opening'];
+  const openNow = () => ofCat('sensors').filter(e => { const st = states()[e.eid]; return st.state === 'on' && OPENING.includes((st.attributes || {}).device_class); });
+  const recentMotion = ms => ofCat('sensors').filter(e => { const st = states()[e.eid]; return isMotion(e.eid, st.attributes || {}) && (st.state === 'on' || Date.now() - Date.parse(st.last_changed) < ms); })
+    .sort((a, b) => Date.parse(states()[b.eid].last_changed) - Date.parse(states()[a.eid].last_changed));
+  const energyNodes = () => CFG.energy.filter(e => states()[e.entity]);
+  const lastScene = () => { let last = null, lt = 0; for (const e of sceneList()) { const t = Date.parse(states()[e].state); if (t > lt) { lt = t; last = e; } } return Date.now() - lt < 6 * 3600e3 ? last : null; };
   function camList() {
     if (CFG.cameras) return CFG.cameras.map((c, i) => {
       const srcs = asList(c.entities || c.entity);
@@ -998,41 +1203,104 @@ function createRing(sr, host, CFG) {
     });
   }
   function stopCams() { camTimers.forEach(clearInterval); camTimers = []; }
+  // draw the four corners for their current kinds (the live values come from hotBtns)
+  function renderCorners() {
+    if (MINI) return;
+    for (const pos of POS) {
+      const b = Q('.hot.' + pos), k = kindOf(pos), rid = roomIdOf(k), kd = KINDS[k] || { hc: 'var(--light)' };
+      b.dataset.h = k; b.hidden = !CFG.hot_buttons || (k === 'none' && !EDIT);
+      b.style.setProperty('--hc', kd.hc);
+      b.classList.toggle('empty', k === 'none'); b.classList.toggle('edit', EDIT); b.classList.toggle('picking', EDIT && editPos === pos);
+      b.setAttribute('aria-label', EDIT ? `Change the ${POS_NAME[pos].toLowerCase()} button (${kindName(k)})` : kindName(k));
+      b.innerHTML = `<span class="hi">${svgOf(rid ? 'room' : k)}<span class="hn">${esc(kindName(k))}</span><i class="md"></i></span><span class="hv"></span>`;
+    }
+    const cb = $('custom'); cb.hidden = !CFG.hot_buttons || !CFG.customise;
+    cb.classList.toggle('on', EDIT); cb.innerHTML = svgOf('pen') + (EDIT ? 'Done' : 'Customise');
+    cb.title = EDIT ? 'Finish changing the corner buttons' : 'Choose what the four corner buttons do';
+  }
   function hotBtns() {
     if (MINI || !root || !CFG.hot_buttons) return;
-    const set = (k, lit, val) => { const b = Q(`.hot[data-h="${k}"]`); b.classList.toggle('lit', !!lit); b.classList.toggle('open', hot === k); $('hv-' + k).textContent = val; return b; };
-    const cams = camList();
-    const recent = cams.some(c => c.motion.some(m => { const st = states()[m]; return st && (st.state === 'on' || Date.now() - Date.parse(st.last_changed) < 120e3); }));
-    set('cams', false, recent ? 'movement' : cams.length + ' camera' + (cams.length === 1 ? '' : 's')).classList.toggle('motion', recent);
-    const on = allLights().filter(e => isActive(e.eid, states()[e.eid])).length;
-    set('lights', on > 0, on ? on + ' on' : 'all off');
-    const ast = states()[alarmEid()], s = ast ? ast.state : 'none', armed = !!ast && !['disarmed', 'unavailable', 'unknown'].includes(s);
-    const ab = set('alarm', armed, ast ? nice(s) : 'not set up'); ab.classList.toggle('armed', armed); ab.style.setProperty('--hc', armed ? 'var(--alert)' : 'var(--media)');
-    const T = thermostats().map(e => states()[e.eid]).filter(st => !unavail(st)), cur = T.map(st => num(st.attributes.current_temperature)).filter(v => v != null);
-    const heating = T.filter(st => st.attributes.hvac_action === 'heating').length;
-    set('heat', heating > 0, (cur.length ? deg(cur.reduce((a, b) => a + b, 0) / cur.length) : '—') + (heating ? ' · ' + heating + ' heating' : ''));
+    for (const pos of POS) {
+      const b = Q('.hot.' + pos), k = kindOf(pos), rid = roomIdOf(k), hv = b.querySelector('.hv'); if (!hv) continue;
+      let lit = false, val = '', motion = false, armed = false;
+      if (rid) {
+        const n = roomNodeOf(rid);
+        if (n) { lit = activeCount(n) > 0; val = subOf(n) || 'all off'; } else val = 'not on the ring';
+      } else if (k === 'cams') {
+        const cams = camList();
+        motion = cams.some(c => c.motion.some(m => { const st = states()[m]; return st && (st.state === 'on' || Date.now() - Date.parse(st.last_changed) < 120e3); }));
+        val = motion ? 'movement' : cams.length + ' camera' + (cams.length === 1 ? '' : 's');
+      } else if (k === 'lights') { const on = onOf(allLights()).length; lit = on > 0; val = on ? on + ' on' : 'all off'; }
+      else if (k === 'alarm') {
+        const ast = states()[alarmEid()], s = ast ? ast.state : 'none'; armed = !!ast && !['disarmed', 'unavailable', 'unknown'].includes(s);
+        lit = armed; val = ast ? nice(s) : 'not set up';
+      } else if (k === 'heat') {
+        const T = thermostats().map(e => states()[e.eid]).filter(st => !unavail(st)), cur = T.map(st => num(st.attributes.current_temperature)).filter(v => v != null);
+        const heating = T.filter(st => st.attributes.hvac_action === 'heating').length; lit = heating > 0;
+        val = (cur.length ? deg(cur.reduce((a, c) => a + c, 0) / cur.length) : '—') + (heating ? ' · ' + heating + ' heating' : '');
+      } else if (k === 'media') {
+        const p = onOf(ofCat('media')); lit = p.length > 0;
+        val = p.length === 1 ? (states()[p[0].eid].attributes.media_title || p[0].name) : p.length ? p.length + ' playing' : 'nothing playing';
+      } else if (k === 'scenes') { const l = lastScene(), n = sceneList().length; lit = !!l; val = l ? sceneName(l) : n + ' scene' + (n === 1 ? '' : 's'); }
+      else if (k === 'doors') {
+        const o = openNow(), m = recentMotion(120e3); lit = o.length > 0; motion = m.length > 0;
+        val = o.length ? o.length + ' open' : m.length ? 'movement' : 'all closed';
+      } else if (k === 'energy') {
+        const sol = CFG.energy.find(e => e.kind === 'solar' && states()[e.entity]), load = CFG.energy.find(e => e.kind === 'load' && states()[e.entity]);
+        const pick = sol || load; if (pick) { const w = watts(pick.entity, states()[pick.entity]); lit = !!sol && w != null && Math.abs(w) >= 40; val = (pick.name || (sol ? 'Solar' : 'Use')) + ' ' + stateText(pick.entity, states()[pick.entity]); }
+        else { const on = onOf(ofCat('plugs')).length; lit = on > 0; val = on + ' plug' + (on === 1 ? '' : 's') + ' on'; }
+      } else if (k === 'blinds') { const L = ofCat('covers'), o = onOf(L).length; lit = o > 0; val = L.length ? (o ? o + ' open' : 'all closed') : 'none'; }
+      else if (k === 'fans') { const o = onOf(ofCat('fans')).length; lit = o > 0; val = o ? o + ' on' : 'all off'; }
+      else if (k === 'plugs') { const o = onOf(ofCat('plugs')).length; lit = o > 0; val = o ? o + ' on' : 'all off'; }
+      else if (k === 'none') val = EDIT ? 'tap to choose' : '';
+      b.classList.toggle('lit', lit && !EDIT); b.classList.toggle('motion', motion && !EDIT); b.classList.toggle('armed', armed && !EDIT);
+      if (k === 'alarm') b.style.setProperty('--hc', armed ? 'var(--alert)' : 'var(--media)');
+      b.classList.toggle('open', !EDIT && (rid ? !!focus && focus.kind === 'area' && focus.id === rid : hot === k));
+      hv.textContent = EDIT ? (editPos === pos ? 'choosing…' : 'tap to change') : val;
+    }
   }
   function openHot(k, keep) {
     clearTimeout(hotAuto); hotAuto = null;
+    const rid = roomIdOf(k);
+    if (rid) { hot = null; sel = null; nodes.forEach(paint); goPlace('area:' + rid); controls(); hotBtns(); return; }
+    if (k === 'none') return;
     if (hot === k && !keep) hot = null; else { hot = k; if (sel) { sel = null; nodes.forEach(paint); } }
     if (k === 'cams' && !keep) hotCam = null;
     controls(); hotBtns();
   }
+  function switchAll(list, domain, on, off, one, many) {          // hold: everything off if any is on, otherwise all on
+    const act = onOf(list); buzz();
+    if (!list.length) { toast('No ' + many + ' to switch'); return; }
+    const turnOn = !act.length, ids = (turnOn ? list : act).map(e => e.eid);
+    call(domain, turnOn ? on : off, { entity_id: ids }); toast(`${ids.length} ${ids.length === 1 ? one : many} ${turnOn ? (on === 'open_cover' ? 'opening' : 'on') : (off === 'close_cover' ? 'closing' : 'off')}`);
+  }
   function hotHold(k) {
+    const rid = roomIdOf(k);
+    if (rid) { const n = roomNodeOf(rid); if (n) toggleRoomLights(n); return; }
     if (k === 'lights') { toggleRoomLights(root); openHot('lights', true); return; }
     if (k === 'heat' && CFG.heating_hold_mode) {
       const w = heaterEid(); if (w) { call('water_heater', 'set_operation_mode', { entity_id: w, operation_mode: CFG.heating_hold_mode }); buzz(); toast(sceneName(w) + ': ' + modeLabel(CFG.heating_hold_mode).toLowerCase()); }
       openHot('heat', true); return;
     }
+    if (k === 'media') {
+      const p = onOf(ofCat('media')); buzz();
+      if (p.length) { call('media_player', 'media_pause', { entity_id: p.map(e => e.eid) }); toast('Paused ' + p.length + ' player' + (p.length === 1 ? '' : 's')); }
+      else toast('Nothing is playing');
+      openHot('media', true); return;
+    }
+    if (k === 'blinds') { switchAll(ofCat('covers'), 'cover', 'open_cover', 'close_cover', 'blind', 'blinds'); openHot('blinds', true); return; }
+    if (k === 'fans') { const on = onOf(ofCat('fans')); buzz(); if (on.length) { call('fan', 'turn_off', { entity_id: on.map(e => e.eid) }); toast(on.length + ' fan' + (on.length === 1 ? '' : 's') + ' off'); } else toast('No fans on'); openHot('fans', true); return; }
+    if (k === 'none') return;
     buzz(); openHot(k, true);
   }
   QA('.hot').forEach(b => {
     let t = null, held = false;
-    b.addEventListener('pointerdown', () => { held = false; clearTimeout(t); t = setTimeout(() => { held = true; hotHold(b.dataset.h); }, HOLD_MS); });
-    b.addEventListener('pointerup', () => { clearTimeout(t); if (!held) openHot(b.dataset.h); });
+    const pos = [...b.classList].find(c => POS.includes(c));
+    b.addEventListener('pointerdown', () => { held = false; clearTimeout(t); if (EDIT) return; t = setTimeout(() => { held = true; hotHold(kindOf(pos)); }, HOLD_MS); });
+    b.addEventListener('pointerup', () => { clearTimeout(t); if (EDIT) { pickCorner(pos); return; } if (!held) openHot(kindOf(pos)); });
     ['pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => clearTimeout(t)));
     b.addEventListener('contextmenu', e => e.preventDefault());
-    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHot(b.dataset.h); } });
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (EDIT) pickCorner(pos); else openHot(kindOf(pos)); } });
   });
   // a doorbell press opens the Cameras card on that door (and closes it after a minute unless someone uses it)
   function dingCheck(h) {
@@ -1041,13 +1309,16 @@ function createRing(sr, host, CFG) {
       const eid = c.doorbell; if (!eid) continue;
       const st = h.states[eid]; if (!st) continue;
       const was = dingSeen[eid]; dingSeen[eid] = st.last_changed;
-      if (was === undefined || was === st.last_changed || st.state !== 'on') continue;
+      if (was === undefined || was === st.last_changed || st.state !== 'on' || EDIT) continue;
       hot = 'cams'; hotCam = c.id; if (sel) { sel = null; nodes.forEach(paint); }
       controls(); hotBtns(); buzz(); toast(`Doorbell · ${c.name}`);
       clearTimeout(hotAuto); hotAuto = setTimeout(() => { hotAuto = null; if (hot === 'cams') { hot = null; controls(); hotBtns(); } }, 60000);
     }
   }
   const modeLabel = x => /^boost_\d+$/.test(x) ? 'Boost ' + x.split('_')[1] + ' min' : /^off_\d+$/.test(x) ? 'Off ' + x.split('_')[1] + ' min' : nice(x);
+  const thingChip = (e, act, sub) => `<button class="chip${act ? ' on' : ''}" style="--sc:${e.sc}" data-a="sel" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(sub)}</div></span></button>`;
+  const toggleChip = (e, act) => `<button class="chip${act ? ' on' : ''}" style="--sc:${e.sc}" data-a="lt" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(roomName(e))}</div></span></button>`;
+  const ago = t => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : hhmm(t); };
   function hotCard(el) {
     const head = (t, sc) => { el.style.setProperty('--sc', sc); return `<div class="h"><i></i>${t}<button class="x" data-a="close" aria-label="Close">✕</button></div>`; };
     let h = '';
@@ -1057,10 +1328,9 @@ function createRing(sr, host, CFG) {
       h = head('Cameras', 'var(--cam)') + (cams.length ? `<div class="cams">${cams.map(c => `<div class="cam2${c.id === hotCam ? ' big' : ''}" data-a="cam" data-v="${c.id}"><img alt="${esc(c.name)}"><span>${esc(c.name)}</span><em>No picture right now</em></div>`).join('')}</div>
         <button class="link" data-a="camlive">${CFG.cameras_path ? 'Open your cameras ›' : 'Live view ›'}</button>` : `<div class="note">No cameras with a room yet.</div>`);
     } else if (hot === 'lights') {
-      const L = allLights(), on = L.filter(e => isActive(e.eid, states()[e.eid])), off = L.filter(e => !on.includes(e));
-      const chip = e => `<button class="chip${on.includes(e) ? ' on' : ''}" style="--sc:var(--light)" data-a="lt" data-v="${e.eid}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(roomName(e))}</div></span></button>`;
+      const L = allLights(), on = onOf(L), off = L.filter(e => !on.includes(e));
       h = head(`Lights · ${on.length} on`, 'var(--light)') + `<div class="row"><button class="btn" data-a="alloff"${on.length ? '' : ' disabled'}>All off</button><button class="btn" data-a="allon"${off.length ? '' : ' disabled'}>All on</button></div>
-        ${on.length ? `<div class="lbl">On</div><div class="lchips">${on.map(chip).join('')}</div>` : ''}${off.length ? `<div class="lbl">Off</div><div class="lchips">${off.map(chip).join('')}</div>` : ''}`;
+        ${on.length ? `<div class="lbl">On</div><div class="lchips">${on.map(e => toggleChip(e, true)).join('')}</div>` : ''}${off.length ? `<div class="lbl">Off</div><div class="lchips">${off.map(e => toggleChip(e, false)).join('')}</div>` : ''}`;
     } else if (hot === 'alarm') {
       const eid = alarmEid(), st = states()[eid], s = st ? st.state : 'none', armed = !!st && !['disarmed', 'unavailable', 'unknown'].includes(s);
       if (!st) h = head('Alarm', 'var(--media)') + `<div class="note">No alarm panel found. Set <b>alarm:</b> in the card if you have one.</div>`;
@@ -1082,6 +1352,40 @@ function createRing(sr, host, CFG) {
       }).join('');
       h = head('Heating', 'var(--heat)') + (rows ? `<div class="lbl">Rooms · target</div>${rows}` : `<div class="note">No thermostats with a room yet.</div>`);
       if (ws && (wa.operation_list || []).length) h += `<div class="lbl">${esc(sceneName(w))} · ${esc(modeLabel(mode || '—'))}</div>` + btns(wa.operation_list, mode, 'wm', modeLabel);
+    } else if (hot === 'media') {
+      const L = ofCat('media'), p = onOf(L);
+      const rows = L.sort((a, b) => isActive(b.eid, states()[b.eid]) - isActive(a.eid, states()[a.eid])).map(e => {
+        const st = states()[e.eid], a = st.attributes || {}, playing = st.state === 'playing';
+        const sub = (a.media_title ? a.media_title + (a.media_artist ? ' · ' + a.media_artist : '') : st.state) + ' · ' + roomName(e);
+        return `<div class="trow mrow"><button class="tn link2" data-a="sel" data-v="${esc(e.eid)}">${esc(e.name)}<small class="${playing ? 'on' : ''}">${esc(sub)}</small></button>
+          <button class="btn${playing ? ' on' : ''}" data-a="pp" data-v="${esc(e.eid)}">${playing ? 'Pause' : 'Play'}</button></div>`;
+      }).join('');
+      h = head(`TV & music · ${p.length} playing`, 'var(--media)') + (p.length ? `<div class="row"><button class="btn" data-a="pauseall">Pause all</button></div>` : '') +
+        (rows ? `<div class="lbl">Players</div>${rows}` : `<div class="note">No TVs or speakers with a room yet.</div>`);
+    } else if (hot === 'scenes') {
+      const L = sceneList(), last = lastScene();
+      h = head('Scenes', 'var(--light)') + (L.length ? `<div class="lchips scn2">${L.map(e => `<button class="chip${e === last ? ' on' : ''}" style="--sc:var(--light)" data-a="scene" data-v="${esc(e)}"><i></i><span class="t"><div class="n">${esc(sceneName(e))}</div><div class="s">${e === last ? 'last run ' + hhmm(states()[e].state) : 'tap to run'}</div></span></button>`).join('')}</div>` : `<div class="note">No scenes yet.</div>`);
+    } else if (hot === 'doors') {
+      const o = openNow(), m = recentMotion(3600e3), al = onOf(ofCat('safety'));
+      h = head('Doors & motion', 'var(--alert)') + (al.length ? `<div class="lbl">Going off now</div><div class="lchips">${al.map(e => thingChip(e, true, roomName(e) + ' · ' + (SAFETY_LABEL[(states()[e.eid].attributes || {}).device_class] || 'alarm'))).join('')}</div>` : '') +
+        `<div class="lbl">Open now</div>` + (o.length ? `<div class="lchips">${o.map(e => thingChip(e, true, roomName(e) + ' · ' + ago(states()[e.eid].last_changed))).join('')}</div>` : `<div class="note">Everything is closed.</div>`) +
+        `<div class="lbl">Movement in the last hour</div>` + (m.length ? `<div class="lchips">${m.map(e => thingChip(e, states()[e.eid].state === 'on', roomName(e) + ' · ' + ago(states()[e.eid].last_changed))).join('')}</div>` : `<div class="note">No movement.</div>`);
+    } else if (hot === 'energy') {
+      const E = energyNodes(), plugs = ofCat('plugs'), on = onOf(plugs);
+      h = head('Energy', 'var(--plug)') + (E.length ? `<div class="kvs">${E.map(e => kv(e.name || sceneName(e.entity), esc(stateText(e.entity, states()[e.entity])))).join('')}</div>` : '') +
+        `<div class="lbl">Plugs · ${on.length} on</div>` + (plugs.length ? `<div class="lchips">${plugs.sort((a, b) => isActive(b.eid, states()[b.eid]) - isActive(a.eid, states()[a.eid])).map(e => toggleChip(e, isActive(e.eid, states()[e.eid]))).join('')}</div>` : `<div class="note">No plugs with a room yet.</div>`) +
+        (E.length ? '' : `<div class="note">Add your solar, battery and grid readings with <b>energy:</b> in the card.</div>`);
+    } else if (hot === 'blinds') {
+      const L = ofCat('covers'), o = onOf(L);
+      h = head(`Blinds · ${o.length} open`, 'var(--fan)') + (L.length ? `<div class="row"><button class="btn" data-a="coverall" data-v="open">All open</button><button class="btn" data-a="coverall" data-v="close">All closed</button></div>` +
+        L.map(e => `<div class="trow mrow"><button class="tn link2" data-a="sel" data-v="${esc(e.eid)}">${esc(e.name)}<small>${esc(roomName(e) + ' · ' + stateText(e.eid, states()[e.eid]))}</small></button>
+          <span class="row" style="margin:0;flex-wrap:nowrap"><button class="btn" data-a="cv" data-v="open:${esc(e.eid)}">Open</button><button class="btn" data-a="cv" data-v="stop:${esc(e.eid)}">Stop</button><button class="btn" data-a="cv" data-v="close:${esc(e.eid)}">Close</button></span></div>`).join('')
+        : `<div class="note">No blinds with a room yet.</div>`);
+    } else if (hot === 'fans' || hot === 'plugs') {
+      const L = ofCat(hot === 'fans' ? 'fans' : 'plugs'), on = onOf(L), off = L.filter(e => !on.includes(e)), label = hot === 'fans' ? 'Fans' : 'Plugs';
+      h = head(`${label} · ${on.length} on`, hot === 'fans' ? 'var(--fan)' : 'var(--plug)') + (hot === 'fans' && on.length ? `<div class="row"><button class="btn" data-a="fansoff">All off</button></div>` : '') +
+        (on.length ? `<div class="lbl">On</div><div class="lchips">${on.map(e => toggleChip(e, true)).join('')}</div>` : '') +
+        (off.length ? `<div class="lbl">Off</div><div class="lchips">${off.map(e => toggleChip(e, false)).join('')}</div>` : '') + (L.length ? '' : `<div class="note">None with a room yet.</div>`);
     }
     el.innerHTML = h;
     el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
@@ -1090,8 +1394,9 @@ function createRing(sr, host, CFG) {
       if (k === 'close') { hot = null; controls(); hotBtns(); return; }
       if (k === 'cam') { hotCam = v; controls(); return; }
       if (k === 'camlive') { if (CFG.cameras_path) navigate(CFG.cameras_path); else { const c = camList().find(x => x.id === hotCam); moreInfo(c && c.srcs.find(s => states()[s])); } return; }
+      if (k === 'sel') { const n = nodes.find(x => x.eid === v); if (n) select(n); return; }
       if (k === 'lt') call(v.split('.')[0], 'toggle', { entity_id: v });
-      if (k === 'alloff') { switchLights(allLights().filter(e => isActive(e.eid, states()[e.eid])), false); buzz(); toast('All lights off'); }
+      if (k === 'alloff') { switchLights(onOf(allLights()), false); buzz(); toast('All lights off'); }
       if (k === 'allon') { switchLights(allLights(), true); buzz(); toast('All lights on'); }
       if (k === 'arm') { call('alarm_control_panel', 'alarm_' + v, { entity_id: alarmEid() }); buzz(); toast(nice(v.replace('arm_', 'arming ').replace('_', ' '))); }
       if (k === 'keypad') { if (CFG.alarm_path) navigate(CFG.alarm_path); else moreInfo(alarmEid()); }
@@ -1101,6 +1406,12 @@ function createRing(sr, host, CFG) {
         pend[v] = { v: t, t: Date.now() }; call('climate', 'set_temperature', { entity_id: v, temperature: t }); const tt = b.parentNode.querySelector('.tt'); if (tt) tt.textContent = deg(t);
       }
       if (k === 'wm') { call('water_heater', 'set_operation_mode', { entity_id: heaterEid(), operation_mode: v }); buzz(); toast(sceneName(heaterEid()) + ': ' + modeLabel(v).toLowerCase()); }
+      if (k === 'pp') { call('media_player', 'media_play_pause', { entity_id: v }); buzz(); }
+      if (k === 'pauseall') { const p = onOf(ofCat('media')); if (p.length) call('media_player', 'media_pause', { entity_id: p.map(e => e.eid) }); buzz(); toast('Paused everything'); }
+      if (k === 'scene') { call('scene', 'turn_on', { entity_id: v }); buzz(); toast(sceneName(v) + ' scene on'); }
+      if (k === 'coverall') { const L = ofCat('covers'); if (L.length) call('cover', v === 'open' ? 'open_cover' : 'close_cover', { entity_id: L.map(e => e.eid) }); buzz(); toast(v === 'open' ? 'Opening all blinds' : 'Closing all blinds'); }
+      if (k === 'cv') { const [act, eid] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)]; call('cover', act + '_cover', { entity_id: eid }); buzz(); }
+      if (k === 'fansoff') { const on = onOf(ofCat('fans')); if (on.length) call('fan', 'turn_off', { entity_id: on.map(e => e.eid) }); buzz(); toast('Fans off'); }
     });
     if (hot === 'cams') el.querySelectorAll('.cam2').forEach(tile => {
       const c = camList().find(x => x.id === tile.dataset.v), img = tile.querySelector('img'), big = tile.classList.contains('big');
@@ -1115,27 +1426,72 @@ function createRing(sr, host, CFG) {
     });
   }
 
-  /* ---------- By room / By system ---------- */
-  /* ---------- layout lock: saving and sharing ----------
-     Kept in Home Assistant's shared frontend data, so every screen and every user sees the same locked ring and
-     follows a change at once. Writing it needs an admin; anyone else (or an older Home Assistant without shared
-     data) locks just their own browser instead. */
-  const LOCAL_KEY = 'homeRing:' + CFG.layout_key;
-  const localLayout = () => { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null'); } catch (e) { return null; } };
+  /* ---------- Customise: choose what each corner does ---------- */
+  function setEdit(on) {
+    EDIT = on; editPos = null; hot = null;
+    if (sel) { sel = null; nodes.forEach(paint); }
+    renderCorners(); controls(); hotBtns();
+  }
+  function pickCorner(pos) { editPos = editPos === pos ? null : pos; renderCorners(); controls(); hotBtns(); }
+  function chooserCard(el) {
+    const cur = kindOf(editPos);
+    const opt = (k, label, icon, hc) => `<button class="opt${k === cur ? ' on' : ''}" style="--hc:${hc}" data-k="${esc(k)}">${svgOf(icon)}<span>${esc(label)}</span></button>`;
+    const rooms = nodes.filter(n => n.kind === 'area').filter((n, i, a) => a.findIndex(m => m.id === n.id) === i).sort((a, b) => a.name.localeCompare(b.name));
+    el.style.setProperty('--sc', 'var(--light)');
+    el.innerHTML = `<div class="h"><i></i>${esc(POS_NAME[editPos])} button<button class="x" data-done="1" aria-label="Close">✕</button></div>
+      <div class="st">Now: ${esc(kindName(cur))}. Pick what it should do.</div>
+      <div class="opts">${Object.keys(KINDS).filter(k => k !== 'none').map(k => opt(k, KINDS[k].name, k, KINDS[k].hc)).join('')}</div>
+      ${rooms.length ? `<div class="lbl">Or go straight to a room</div><div class="opts">${rooms.map(n => opt('room:' + n.id, n.name, 'room', 'var(--light)')).join('')}</div>` : ''}
+      <div class="row">${opt('none', 'Leave it empty', 'none', 'var(--dim)')}</div>
+      <div class="note">${cornersStore.shared === false ? 'Saved in this browser.' : 'Saved for every screen.'} Holding a corner still does its quick action once you tap Done.</div>`;
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
+      const next = CORNERS.slice(); next[POS.indexOf(editPos)] = b.dataset.k;
+      const where = await saveShared(cornersStore, next); buzz();
+      toast(`${POS_NAME[editPos]}: ${kindName(b.dataset.k)}` + (where === 'here' && cornersStore.shared ? ' (this browser only)' : ''));
+      editPos = null; renderCorners(); controls(); hotBtns();
+    });
+    el.querySelector('[data-done]').onclick = () => { editPos = null; renderCorners(); controls(); hotBtns(); };
+  }
+  $('custom').onclick = () => setEdit(!EDIT);
+  renderCorners();
+
+  /* ---------- saving in Home Assistant ----------
+     The layout lock and the corner choices live in Home Assistant's shared frontend data, so every screen and
+     every user sees the same thing and follows a change at once. Writing needs an admin; anyone else (or an older
+     Home Assistant without shared data) saves in their own browser instead. */
+  const stores = [];
+  function makeStore(key, apply) { const s = { key, apply, shared: null, unsub: null, started: false }; stores.push(s); return s; }
+  const localOf = s => { try { return JSON.parse(localStorage.getItem('homeRing:' + s.key) || 'null'); } catch (e) { return null; } };
+  function startStore(s) {
+    if (s.started || !H) return; s.started = true;
+    const conn = H.connection;
+    if (!conn || !conn.subscribeMessage) { s.shared = false; s.apply(localOf(s)); return; }
+    conn.subscribeMessage(m => { s.shared = true; s.apply(m && m.value != null ? m.value : localOf(s)); }, { type: 'frontend/subscribe_system_data', key: s.key })
+      .then(u => { if (destroyed) u(); else s.unsub = u; }, () => { s.shared = false; s.apply(localOf(s)); });
+  }
+  async function saveShared(s, v) {        // 'all' = every screen, 'here' = this browser, null = not allowed
+    if (s.shared && H.callWS) {
+      try { await H.callWS({ type: 'frontend/set_system_data', key: s.key, value: v }); try { localStorage.removeItem('homeRing:' + s.key); } catch (e) {} return 'all'; }
+      catch (e) { if (!v && !localOf(s)) return null; }     // clearing a shared value needs an admin
+    }
+    try { if (v) localStorage.setItem('homeRing:' + s.key, JSON.stringify(v)); else localStorage.removeItem('homeRing:' + s.key); } catch (e) {}
+    s.apply(v); return 'here';
+  }
+  const layoutStore = makeStore(CFG.layout_key, v => setLayout(v));
+  const cornersStore = makeStore(CFG.corners_key, v => {
+    const c = cleanCorners(v) || cleanCorners(CFG.corners) || DEFAULT_CORNERS.slice();
+    if (c.join() === CORNERS.join()) return;
+    CORNERS = c; renderCorners(); if (hot && !CORNERS.includes(hot) && hot !== 'cams') hot = null; controls(); hotBtns();
+  });
+  function startSync() { if (CFG.layout_lock) startStore(layoutStore); if (CFG.hot_buttons && !MINI) startStore(cornersStore); }
+
+  /* ---------- layout lock ---------- */
   const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
   const OPEN_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>';
   function setLayout(v) {
     v = v || null;
     if (JSON.stringify(v) === JSON.stringify(LAYOUT)) return;
     LAYOUT = v; structKey = ''; if (H && root) update(H);
-  }
-  function startLayoutSync() {
-    if (layoutStarted || !H || !CFG.layout_lock) return; layoutStarted = true;
-    const conn = H.connection;
-    if (!conn || !conn.subscribeMessage) { layoutShared = false; setLayout(localLayout()); return; }
-    conn.subscribeMessage(m => { layoutShared = true; setLayout(m && m.value != null ? m.value : localLayout()); },
-      { type: 'frontend/subscribe_system_data', key: CFG.layout_key })
-      .then(u => { if (destroyed) u(); else unsubLayout = u; }, () => { layoutShared = false; setLayout(localLayout()); });
   }
   function makeLayout() {                 // the layout as it is now, unlocked, for both views
     const keep = MODE, modes = {};
@@ -1152,14 +1508,6 @@ function createRing(sr, host, CFG) {
     structKey = ''; update(H);            // building the snapshots replaced the ring's own tree: put it back
     return out;
   }
-  async function saveLayout(v) {          // 'all' = every screen, 'here' = this browser, null = not allowed
-    if (layoutShared && H.callWS) {
-      try { await H.callWS({ type: 'frontend/set_system_data', key: CFG.layout_key, value: v }); try { localStorage.removeItem(LOCAL_KEY); } catch (e) {} return 'all'; }
-      catch (e) { if (!v && LAYOUT && !localLayout()) return null; }     // unlocking a shared lock needs an admin
-    }
-    try { if (v) localStorage.setItem(LOCAL_KEY, JSON.stringify(v)); else localStorage.removeItem(LOCAL_KEY); } catch (e) {}
-    setLayout(v); return 'here';
-  }
   function lockUi() {
     const seg = $('lockseg'); seg.hidden = !CFG.layout_lock || MINI; if (seg.hidden) return;
     const b = $('lock'), on = !!LAYOUT;
@@ -1170,17 +1518,19 @@ function createRing(sr, host, CFG) {
   }
   $('lock').onclick = async () => {
     if (!H || !root) return;
-    const r = await saveLayout(LAYOUT ? null : makeLayout()); buzz();
+    const r = await saveShared(layoutStore, LAYOUT ? null : makeLayout()); buzz();
     if (r === null) toast('Only an admin can unlock the shared layout');
     else toast(LAYOUT ? (r === 'all' ? 'Layout locked on every screen' : 'Layout locked in this browser') : 'Layout unlocked');
     lockUi();
   };
   $('tidy').onclick = async () => {
     if (!H || !root) return;
-    const r = await saveLayout(makeLayout()); buzz();
+    const r = await saveShared(layoutStore, makeLayout()); buzz();
     toast(r === 'all' ? 'Rooms tidied and locked on every screen' : 'Rooms tidied and locked in this browser'); lockUi();
   };
   let destroyed = false;
+
+  /* ---------- By room / By system ---------- */
 
   function setMode(m) { if (m === MODE) return; MODE = m; LS.set('homeRingMode', m); sel = null; focus = null; structKey = ''; if (H) update(H); }
   $('mode').querySelectorAll('button').forEach(b => b.onclick = () => setMode(b.dataset.m));
@@ -1224,7 +1574,7 @@ function createRing(sr, host, CFG) {
   function update(h) {
     if (!h || !h.states) return;
     H = h; $('wait').style.display = 'none';
-    startLayoutSync();
+    startSync();
     const key = regKeyOf(h) + '|' + Object.keys(h.states).length + '|' + MODE;   // a new thing's state can arrive after its registry entry
     if (key !== structKey || !root) {
       structKey = key; const was = focus, wsel = sel;
@@ -1232,19 +1582,19 @@ function createRing(sr, host, CFG) {
       focus = findSame(was) || root; sel = wsel ? nodes.find(n => n.eid === wsel.eid) || null : null; geom();
       Object.assign(view, { x0: focus.x0, x1: focus.x1, d: focus.depth }); draw(); labels(); side(); controls();
       lastStates = h.states; ringSig = sigOf(h); selSt = sel && h.states[sel.eid];
-      motionCheck(h, true); dingCheck(h); hotBtns(); voiceCheck(h); return;
+      renderCorners(); motionCheck(h, true); safetyCheck(h, true); dingCheck(h); hotBtns(); voiceCheck(h); return;
     }
     if (h.states === lastStates) return;
     lastStates = h.states;
     voiceCheck(h); dingCheck(h); hotBtns();
     const sig = sigOf(h); if (sig === ringSig) return;
-    ringSig = sig; motionCheck(h, false); nodes.forEach(paint); if (!anim) labels(); side();
+    ringSig = sig; motionCheck(h, false); safetyCheck(h, false); nodes.forEach(paint); if (!anim) labels(); side();
     if (hot && hot !== 'cams' && !sel) controls();          // an open Lights / Alarm / Heating card follows the house
     if (sel && h.states[sel.eid] !== selSt) { selSt = h.states[sel.eid]; const ae = sr.activeElement; if (!ae || ae.type !== 'range') controls(); }
   }
   function resize() { if (root) { geom(); draw(); labels(); } }
   const clock = setInterval(() => { if (root) hotBtns(); }, 15000);     // "movement" fades after two minutes
-  function destroy() { destroyed = true; if (unsubLayout) { try { unsubLayout(); } catch (e) {} unsubLayout = null; } clearInterval(clock); clearInterval(camTimer); stopCams(); clearTimeout(hotAuto); cancelAnimationFrame(anim); }
+  function destroy() { destroyed = true; for (const st of stores) if (st.unsub) { try { st.unsub(); } catch (e) {} st.unsub = null; } clearInterval(clock); clearInterval(camTimer); stopCams(); clearTimeout(hotAuto); cancelAnimationFrame(anim); }
   return { update, resize, destroy };
 }
 

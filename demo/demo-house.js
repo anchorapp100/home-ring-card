@@ -99,6 +99,27 @@
   bs('binary_sensor.doorbell_ding', 'driveway', 'Doorbell Ding', 'occupancy', false, 300);
   entities['binary_sensor.doorbell_ding'].hidden = true;           // the doorbell button itself: not a thing for the ring
   cam('camera.front_door', 'driveway', 'Front Door Camera', svgUri(CAM_FRONT));
+  // More kinds of device (v1.3): every device with a room is on the ring
+  const devices = {};
+  const onDevice = (id, name, area, eids) => { devices[id] = { id, name, name_by_user: null, area_id: area }; for (const e of eids) entities[e].device_id = id; };
+  add('lock.front_door', 'hall', 'locked', { friendly_name: 'Front Door Lock' });
+  bs('binary_sensor.hall_co', 'hall', 'Hall CO Alarm', 'carbon_monoxide', false, 4000);
+  bs('binary_sensor.kitchen_leak', 'kitchen', 'Kitchen Sink Leak', 'moisture', false, 3000);
+  add('vacuum.robot', 'living_room', 'docked', { friendly_name: 'Robot Vacuum', battery_level: 100, fan_speed: 'standard' });
+  add('valve.water_main', 'utility', 'open', { friendly_name: 'Water Main' });
+  // a sensor-only device: no kind of its own, so it is shown by its temperature, with the rest as readings
+  add('sensor.office_climate_temperature', 'office', '22.1', { friendly_name: 'Office Climate Sensor Temperature', unit_of_measurement: '°C', device_class: 'temperature' });
+  add('sensor.office_climate_humidity', 'office', '51', { friendly_name: 'Office Climate Sensor Humidity', unit_of_measurement: '%', device_class: 'humidity' });
+  add('sensor.office_climate_battery', 'office', '88', { friendly_name: 'Office Climate Sensor Battery', unit_of_measurement: '%', device_class: 'battery' });
+  onDevice('dev_office_climate', 'Office Climate Sensor', 'office', ['sensor.office_climate_temperature', 'sensor.office_climate_humidity', 'sensor.office_climate_battery']);
+  // a plug's readings go on its card
+  add('sensor.office_monitor_power', 'office', '38', { friendly_name: 'Office Monitor Power', unit_of_measurement: 'W', device_class: 'power' });
+  add('sensor.office_monitor_energy', 'office', '12.4', { friendly_name: 'Office Monitor Energy', unit_of_measurement: 'kWh', device_class: 'energy' });
+  onDevice('dev_monitor_plug', 'Office Monitor', 'office', ['switch.office_monitor', 'sensor.office_monitor_power', 'sensor.office_monitor_energy']);
+  // a hub with no kind of its own: shown under Other
+  add('remote.tv_hub', 'living_room', 'on', { friendly_name: 'TV Hub', current_activity: 'Watch TV' });
+  add('select.tv_hub_activity', 'living_room', 'Watch TV', { friendly_name: 'TV Hub Activity', options: ['Watch TV', 'Listen to music', 'PowerOff'] });
+  onDevice('dev_tv_hub', 'TV Hub', 'living_room', ['remote.tv_hub', 'select.tv_hub_activity']);
   // Energy (shown under "By system")
   add('sensor.solar_power', 'utility', '2140', { friendly_name: 'Solar Power', unit_of_measurement: 'W', device_class: 'power' });
   add('sensor.battery_power', 'utility', '860', { friendly_name: 'Battery Power', unit_of_measurement: 'W', device_class: 'power' });
@@ -133,7 +154,7 @@
     };
     const ids = d => [].concat(d.entity_id || []);
     hass = {
-      states: Object.assign({}, states), entities, devices: {}, areas, floors,
+      states: Object.assign({}, states), entities, devices, areas, floors,
       user: { name: 'Demo' }, language: 'en',
       callService(domain, service, data) {
         data = data || {};
@@ -151,11 +172,16 @@
           else if (service === 'set_preset_mode') set(eid, st.state, { preset_mode: data.preset_mode });
           else if (service === 'set_operation_mode') set(eid, data.operation_mode.startsWith('boost') ? 'on' : data.operation_mode, { operation_mode: data.operation_mode });
           else if (service === 'media_play_pause') set(eid, st.state === 'playing' ? 'paused' : 'playing');
+          else if (service === 'media_pause') set(eid, st.state === 'playing' ? 'paused' : st.state);
           else if (service === 'volume_set') set(eid, st.state, { volume_level: data.volume_level });
           else if (service === 'set_percentage') set(eid, data.percentage ? 'on' : 'off', { percentage: data.percentage });
           else if (/^(open|close|stop)_cover$/.test(service)) set(eid, service === 'open_cover' ? 'open' : service === 'close_cover' ? 'closed' : st.state, { current_position: service === 'open_cover' ? 100 : service === 'close_cover' ? 0 : st.attributes.current_position });
           else if (service === 'set_cover_position') set(eid, data.position > 0 ? 'open' : 'closed', { current_position: data.position });
           else if (service.startsWith('alarm_arm_')) set(eid, 'armed_' + service.slice(10));
+          else if (domain === 'lock') set(eid, service === 'lock' ? 'locked' : 'unlocked');
+          else if (domain === 'valve') set(eid, service === 'open_valve' ? 'open' : service === 'close_valve' ? 'closed' : st.state);
+          else if (domain === 'vacuum') set(eid, service === 'start' ? 'cleaning' : service === 'pause' ? 'paused' : 'returning');
+          else if (domain === 'select') set(eid, data.option);
         }
         onChange(hass = Object.assign({}, hass));
         return Promise.resolve();

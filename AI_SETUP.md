@@ -56,7 +56,10 @@ B. THE CARD. One YAML block I can paste into a card's code editor. Options:
    strip_prefixes: [list]             words to drop from the start of names, e.g. a brand
    lights_exclude: [list]             lights left out of "all on / all off" and room holds
    scenes: true | false | [list]      the band of scenes around the ring (default: all scenes)
-   hot_buttons: true | false          the four corner buttons (Cameras, Lights, Alarm, Heating)
+   hot_buttons: true | false          the four corner buttons
+   corners: [tl, tr, bl, br]           what each corner does: cams, lights, alarm, heat, media, scenes, doors,
+                                      energy, blinds, fans, plugs, room:<area id>, none
+                                      (default cams, lights, alarm, heat; people can also change them on screen)
    cameras: list of {name, entity or entities: [main, fallback], doorbell, motion: [list]}
            (default: every camera that has a room, with that room's motion sensors)
    camera_refresh: seconds between stills (default 2)
@@ -69,6 +72,8 @@ B. THE CARD. One YAML block I can paste into a card's code editor. Options:
    voice_entity: input_text.home_ring_focus   only with the voice add-on
    temperature_tint: true | false; comfort_temperature (default 20.5); temperature_span (default 4)
    motion_pulse: true | false
+   devices: true | false              every device with a room on the ring (default true)
+   safety_alerts: true | false        leak/smoke/gas/CO alert on screen (default true)
    layout_lock: true | false         the Lock layout button (on by default; locking is done on screen)
    Leave out any option whose default is fine. Keep the YAML short and valid.
 

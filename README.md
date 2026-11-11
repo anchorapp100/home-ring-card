@@ -6,9 +6,14 @@ The centre is where you are. The rings around it are your floors, then rooms, th
 
 ![The whole house](images/home.jpg)
 
-Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there is nothing to list by hand. Give a new device a room and it appears on the ring within a second or two.
+Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there is nothing to list by hand. **Every device with a room is on the ring.** Give a new device a room and it appears within a second or two, whatever kind of device it is.
 
 ## What it does
+
+- **Every device with a room appears**, sorted into Lights, Heating, TV & music, Doors & motion, Safety, Alarm, Locks, Cameras, Fans, Blinds, Valves, Vacuums, Sirens, Plugs, Sensors or Other.
+  - A device's readings, such as a plug's power or a sensor's humidity and battery, go on its card rather than cluttering the ring.
+  - A device the card has no buttons for still gets its live state and a **More controls** button, which opens Home Assistant's own controls for it.
+- **Safety alerts.** When a water leak, smoke, gas or carbon monoxide sensor goes off, its room flashes and its card opens.
 
 - **Tap** a floor, room or kind to go in. Tap the centre to go back out.
 - **Tap a thing** to open its card: brightness, colour, colour temperature and effects for lights; target, modes and a 24-hour graph for thermostats; play, volume and source for media; open, stop and close for blinds; stills for cameras.
@@ -19,11 +24,20 @@ Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there
 - **Scenes** sit in a band around the outside. Tap one to run it.
 - **Layout lock.** Tap **Lock layout** and every room stays exactly where it is. New devices squeeze into their room, and a new room starts slim at the end of its floor, so the rooms you know move a degree or two at most. **Re-tidy** lays everything out afresh. The lock is kept in Home Assistant, so every screen shows the same ring.
 - **By room or By system.** Switch the ring to Lights, Heating, Energy, TV & music, Security and Blinds, each split by room. Energy can include your solar, battery and grid readings.
-- **Corner buttons** for Cameras, Lights, Alarm and Heating:
-  - Cameras opens a grid of stills, and opens by itself when a doorbell rings.
-  - Hold Lights to switch the whole house.
-  - Alarm arms from the ring. Disarming always goes through Home Assistant's own keypad.
-  - Heating gives every thermostat − and +, and your boiler's modes. Hold it for a boost.
+- **Four corner buttons**, Cameras, Lights, Alarm and Heating to start with. Tap one for its card and hold it for its quick action. Tap **Customise** to change what each corner does. Choose from:
+  - **Cameras** opens a grid of stills, and opens by itself when a doorbell rings.
+  - **Lights:** hold to switch the whole house.
+  - **Alarm** arms from the ring. Disarming always goes through Home Assistant's own keypad.
+  - **Heating** gives every thermostat − and +, and your boiler's modes. Hold it for a boost.
+  - **TV & music** shows what's playing. Hold it to pause everything.
+  - **Scenes** lists every scene, to run with one tap.
+  - **Doors & motion** shows what's open now and any movement in the last hour.
+  - **Energy** shows your power readings and plugs.
+  - **Blinds:** hold to close them all, or open them all.
+  - **Fans:** hold to turn them all off.
+  - **Plugs** lists every plug to switch.
+  - **A room shortcut:** tap goes straight to that room, and hold switches its lights.
+  - **Empty** hides that corner.
 - **Voice (optional):** "show me the kitchen" moves the ring to the kitchen.
 - **Mini card:** a small summary that opens the full ring when tapped.
 - Works on wall tablets, desktops and phones. On a phone the panel moves under the ring.
@@ -36,6 +50,10 @@ Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there
 
 ### HACS (recommended)
 
+[![Open your Home Assistant and add Home Ring to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=anchorapp100&repository=home-ring-card&category=plugin)
+
+The button opens your own Home Assistant on this repository; download Home Ring, then reload your browser. In Home Assistant 2026.11 and later, HACS is built in as the **Marketplace** (Settings → Marketplace) and the button works there too. Or do it by hand:
+
 1. In HACS, open the **⋮** menu → **Custom repositories**.
 2. Add `https://github.com/anchorapp100/home-ring-card` with the type **Dashboard**.
 3. Find **Home Ring** in HACS and download it.
@@ -47,6 +65,29 @@ Home Ring reads Home Assistant's own floors, rooms (areas) and devices, so there
 2. Go to **Settings → Dashboards → ⋮ → Resources → Add resource**.
 3. Enter the URL `/local/home-ring-card/home-ring-card.js` and choose **JavaScript module**.
 4. Reload your browser.
+
+## What shows up, and where
+
+| In Home Assistant | On the ring |
+|---|---|
+| Lights; switches with "light", "lamp" or "bulb" in the name | Lights |
+| Other switches | Plugs |
+| Thermostats, water heaters, humidifiers | Heating |
+| TVs, speakers, media players | TV & music |
+| Door, window, motion, occupancy and presence sensors | Doors & motion |
+| Leak (moisture), smoke, gas, carbon monoxide and safety sensors | Safety, with an alert when one goes off |
+| Alarm panels | Alarm |
+| Locks: unlocking takes two taps | Locks |
+| Cameras | Cameras |
+| Fans | Fans |
+| Blinds, curtains, garage doors | Blinds |
+| Water and gas valves | Valves |
+| Robot vacuums, lawn mowers | Vacuums |
+| Sirens: sounding one takes two taps, and a hold never sounds it | Sirens |
+| A device that only has readings (a temperature sensor, a solar charger, a scale) | Sensors, shown by its most useful reading |
+| Anything else with a room (hubs, remotes, toggles, buttons) | Other |
+
+A sensor is sorted by what Home Assistant says it detects. If a leak sensor arrives without that, open its settings in Home Assistant and set **Show as → Moisture**.
 
 ## Before you start: rooms and floors
 
@@ -132,7 +173,10 @@ temperature_tint: true
 comfort_temperature: 20.5           # rooms at this temperature keep their own colour
 temperature_span: 4                 # fully blue or orange this many degrees away
 motion_pulse: true
+devices: true                       # every device with a room
+safety_alerts: true
 hot_buttons: true
+corners: [cams, lights, media, room:kitchen]   # top left, top right, bottom left, bottom right
 layout_lock: true
 ```
 
@@ -149,6 +193,8 @@ layout_lock: true
 | `lights_exclude` | none | Lights left out of house and room switching |
 | `scenes` | `true` | Scene band: `true`, `false`, or a list |
 | `hot_buttons` | `true` | The four corner buttons |
+| `corners` | `[cams, lights, alarm, heat]` | Starting choice for the corners: top left, top right, bottom left, bottom right. Kinds: `cams`, `lights`, `alarm`, `heat`, `media`, `scenes`, `doors`, `energy`, `blinds`, `fans`, `plugs`, `room:<area id>`, `none`. A choice made with Customise overrides it |
+| `customise`, `corners_key` | `true`, `home_ring_corners` | Show the Customise button; name the choice is saved under |
 | `cameras` | every camera with a room | Camera stills, doorbells and motion |
 | `camera_refresh` | `2` | Seconds between stills |
 | `cameras_path`, `alarm_path` | none | Open a view instead of Home Assistant's pop-up |
@@ -158,8 +204,18 @@ layout_lock: true
 | `voice_entity` | none | See "Voice" below |
 | `temperature_tint`, `comfort_temperature`, `temperature_span` | `true`, `20.5`, `4` | Room colour by temperature |
 | `motion_pulse` | `true` | Rooms pulse on motion |
+| `devices` | `true` | Put every device with a room on the ring; `false` shows only lights, heating, media, sensors, cameras, fans, blinds, plugs and the alarm |
+| `safety_alerts` | `true` | Flash the room and open the card when a leak, smoke, gas or CO sensor goes off |
 | `layout_lock` | `true` | Show the Lock layout button and follow a saved lock (`false` hides it) |
 | `layout_key` | `home_ring_layout` | Name the lock is saved under; give two rings different keys to lock them separately |
+
+## Corner buttons
+
+Tap **Customise** in the panel. The four corners get a dashed outline. Tap one, pick what it should do, and tap **Done**. While Customise is on, holding a corner does nothing, so nothing gets switched while you set it up.
+
+![Choosing what a corner does](images/customise.jpg)
+
+The choice is saved in Home Assistant, like the layout lock, so every screen shows the same corners. Choosing for everyone needs an admin; anyone else changes only their own browser. To fix the corners in YAML instead, set `corners:` and `customise: false`.
 
 ## Layout lock
 
