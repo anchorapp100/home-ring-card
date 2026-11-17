@@ -256,7 +256,7 @@
  * slide on a light to dim it. Everything comes from Home Assistant's own floors, areas and entities, so new
  * devices appear by themselves once they have a room.
  */
-const HOME_RING_VERSION = '1.4.0';
+const HOME_RING_VERSION = '1.4.1';
 
 const HR_CSS = `
 :host{
@@ -490,6 +490,8 @@ const NS = 'http://www.w3.org/2000/svg', TAU = Math.PI * 2;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => { const x = parseFloat(v); return isFinite(x) ? x : null; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, easeIO = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+// a colour from the card's options: only something the browser accepts as a colour, else null (never raw text in style="")
+const cssColour = v => (v != null && typeof CSS !== 'undefined' && CSS.supports && CSS.supports('color', String(v))) ? String(v) : null;
 const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const asList = v => v == null || v === false ? [] : Array.isArray(v) ? v : [v];
 // a list of patterns: an entity id, or part of one with * wildcards ("light.tablet_*", "*_segment_*");
@@ -764,7 +766,7 @@ function createRing(sr, host, CFG) {
     const entNode = (x, a, hue) => {
       const e = x.c === 'power' ? ENERGY_BY[x.eid] : null;
       return mk('ent', e && e.name ? e.name : shortName(states[x.eid], x.eid, areas[a].name, x.devName),
-        { hue, cat: x.c, sc: e ? (e.color || ENERGY_COLOURS[e.kind] || ENERGY_COLOURS.other) : CATS[x.c].sc, eid: x.eid, dev: x.dev || null });
+        { hue, cat: x.c, sc: e ? (cssColour(e.color) || ENERGY_COLOURS[e.kind] || ENERGY_COLOURS.other) : CATS[x.c].sc, eid: x.eid, dev: x.dev || null });
     };
     const R = mk('home', 'Home');
     const byName = (a, b) => areas[a].name.localeCompare(areas[b].name);
@@ -1173,7 +1175,7 @@ function createRing(sr, host, CFG) {
         return `<button class="chip${k ? ' on' : ''}" style="--sc:var(--light)" data-i="${n.i}"><i></i><span class="t"><div class="n">${esc(n.name)}</div><div class="s">${esc(txt)}</div></span></button>`;
       }
       const st = states()[n.eid], act = isActive(n.eid, st);
-      return `<button class="chip${act ? ' on' : ''}" style="--sc:${n.sc}" data-i="${n.i}"><i></i><span class="t"><div class="n">${esc(n.name)}</div><div class="s">${esc(stateText(n.eid, st))}</div></span></button>`;
+      return `<button class="chip${act ? ' on' : ''}" style="--sc:${esc(n.sc)}" data-i="${n.i}"><i></i><span class="t"><div class="n">${esc(n.name)}</div><div class="s">${esc(stateText(n.eid, st))}</div></span></button>`;
     }).join('');
     $('rows').querySelectorAll('.chip').forEach(b => b.onclick = () => { const n = nodes[+b.dataset.i]; if (n.kind !== 'ent') setFocus(n); else select(n); });
   }
@@ -1211,8 +1213,8 @@ function createRing(sr, host, CFG) {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="toggle">${act ? 'Turn off' : 'Turn on'}</button>
         ${dim ? `<input type="range" min="1" max="100" step="1" value="${act && a.brightness ? Math.round(a.brightness / 2.55) : 1}" data-a="bri" aria-label="Brightness"><span class="pv">${act && a.brightness ? Math.round(a.brightness / 2.55) + '%' : 'off'}</span>` : ''}</div>`;
       if (modes.includes('color_temp') && a.min_color_temp_kelvin) {
-        h += `<div class="lbl">Colour temperature</div><div class="row"><input class="ct" type="range" min="${a.min_color_temp_kelvin}" max="${a.max_color_temp_kelvin}" step="50"
-          value="${a.color_temp_kelvin || Math.round((a.min_color_temp_kelvin + a.max_color_temp_kelvin) / 2)}" data-a="ct" aria-label="Colour temperature"><span class="pv">${a.color_temp_kelvin ? a.color_temp_kelvin + ' K' : ''}</span></div>`;
+        h += `<div class="lbl">Colour temperature</div><div class="row"><input class="ct" type="range" min="${esc(a.min_color_temp_kelvin)}" max="${esc(a.max_color_temp_kelvin)}" step="50"
+          value="${esc(a.color_temp_kelvin || Math.round((a.min_color_temp_kelvin + a.max_color_temp_kelvin) / 2))}" data-a="ct" aria-label="Colour temperature"><span class="pv">${a.color_temp_kelvin ? esc(a.color_temp_kelvin) + ' K' : ''}</span></div>`;
       }
       if (modes.some(m => ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'].includes(m))) {
         const hue = (a.hs_color || [0, 0])[0];
@@ -1225,7 +1227,7 @@ function createRing(sr, host, CFG) {
       h += `<div class="kvs">${kv('Colour mode', a.color_mode && esc(nice(a.color_mode)))}</div>`;
     } else if (d === 'switch' || d === 'fan' || d === 'input_boolean' || d === 'remote') {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="toggle">${act ? 'Turn off' : 'Turn on'}</button>
-        ${d === 'fan' && a.percentage != null ? `<input type="range" min="0" max="100" step="${a.percentage_step || 1}" value="${a.percentage || 0}" data-a="fanpct" aria-label="Fan speed"><span class="pv">${a.percentage || 0}%</span>` : ''}</div>`;
+        ${d === 'fan' && a.percentage != null ? `<input type="range" min="0" max="100" step="${esc(a.percentage_step || 1)}" value="${esc(a.percentage || 0)}" data-a="fanpct" aria-label="Fan speed"><span class="pv">${esc(a.percentage || 0)}%</span>` : ''}</div>`;
     } else if (d === 'climate') {
       h += `<div class="clim"><div><div class="lbl">Room</div><div class="big">${a.current_temperature != null ? esc(a.current_temperature) + '°' : '—'}</div></div>
         <div><div class="lbl">Target</div><div class="row tgt"><button class="btn" data-a="t-">−</button><span class="big">${a.temperature != null ? esc(a.temperature) + '°' : '—'}</span><button class="btn" data-a="t+">+</button></div></div></div>
@@ -1245,14 +1247,14 @@ function createRing(sr, host, CFG) {
       if ((a.source_list || []).length && a.source_list.length <= 40) h += `<div class="lbl">Source</div><select data-a="source">${a.source_list.map(x => `<option${x === a.source ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     } else if (d === 'cover') {
       h += `<div class="row"><button class="btn" data-a="open">Open</button><button class="btn" data-a="stop">Stop</button><button class="btn" data-a="shut">Close</button></div>`;
-      if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${a.current_position}" data-a="pos" aria-label="Position"><span class="pv">${a.current_position}%</span></div>`;
+      if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${esc(a.current_position)}" data-a="pos" aria-label="Position"><span class="pv">${esc(a.current_position)}%</span></div>`;
     } else if (d === 'lock') {
       const locked = st.state === 'locked';
       h += `<div class="row"><button class="btn${locked ? ' on' : ''}" data-a="lock">Lock</button><button class="btn" data-a="confirm" data-v="unlock">Unlock…</button>${a.supported_features & 1 ? '<button class="btn" data-a="confirm" data-v="open">Open…</button>' : ''}</div>
         <div class="note">Unlocking asks you to tap twice${a.code_format ? ', and your lock needs its code: use More controls' : ''}.</div>`;
     } else if (d === 'valve') {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="vopen">Open</button><button class="btn" data-a="vclose">Close</button>${a.current_position != null ? '<button class="btn" data-a="vstop">Stop</button>' : ''}</div>`;
-      if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${a.current_position}" data-a="vpos" aria-label="Position"><span class="pv">${a.current_position}%</span></div>`;
+      if (a.current_position != null) h += `<div class="row"><input type="range" min="0" max="100" value="${esc(a.current_position)}" data-a="vpos" aria-label="Position"><span class="pv">${esc(a.current_position)}%</span></div>`;
     } else if (d === 'vacuum' || d === 'lawn_mower') {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="vstart">Start</button><button class="btn" data-a="vpause">Pause</button><button class="btn" data-a="vdock">Dock</button></div>
         <div class="kvs">${kv('Battery', a.battery_level != null ? esc(a.battery_level) + '%' : null)}${kv('Fan speed', a.fan_speed ? esc(a.fan_speed) : null)}</div>`;
@@ -1260,7 +1262,7 @@ function createRing(sr, host, CFG) {
       h += `<div class="row">${act ? '<button class="btn on" data-a="sirenoff">Turn off</button>' : '<button class="btn" data-a="confirm" data-v="siren">Sound it…</button>'}</div>`;
     } else if (d === 'humidifier') {
       h += `<div class="row"><button class="btn${act ? ' on' : ''}" data-a="toggle">${act ? 'Turn off' : 'Turn on'}</button>
-        ${a.humidity != null ? `<input type="range" min="${a.min_humidity ?? 0}" max="${a.max_humidity ?? 100}" step="1" value="${a.humidity}" data-a="hum" aria-label="Target humidity"><span class="pv">${a.humidity}%</span>` : ''}</div>
+        ${a.humidity != null ? `<input type="range" min="${esc(a.min_humidity ?? 0)}" max="${esc(a.max_humidity ?? 100)}" step="1" value="${esc(a.humidity)}" data-a="hum" aria-label="Target humidity"><span class="pv">${esc(a.humidity)}%</span>` : ''}</div>
         <div class="kvs">${kv('Humidity now', a.current_humidity != null ? esc(a.current_humidity) + '%' : null)}${kv('Mode', a.mode ? esc(nice(a.mode)) : null)}</div>`;
     } else if (d === 'button' || d === 'input_button') {
       h += `<div class="row"><button class="btn" data-a="press">Press</button></div>`;
@@ -1269,7 +1271,7 @@ function createRing(sr, host, CFG) {
     } else if ((d === 'select' || d === 'input_select') && (a.options || []).length <= 60) {
       h += `<select data-a="opt">${(a.options || []).map(x => `<option${x === st.state ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     } else if ((d === 'number' || d === 'input_number') && a.min != null && a.max != null) {
-      h += `<div class="row"><input type="range" min="${a.min}" max="${a.max}" step="${a.step || 1}" value="${esc(st.state)}" data-a="num" aria-label="${esc(sel.name)}"><span class="pv">${esc(st.state)}${a.unit_of_measurement ? ' ' + esc(a.unit_of_measurement) : ''}</span></div>`;
+      h += `<div class="row"><input type="range" min="${esc(a.min)}" max="${esc(a.max)}" step="${esc(a.step || 1)}" value="${esc(st.state)}" data-a="num" aria-label="${esc(sel.name)}"><span class="pv">${esc(st.state)}${a.unit_of_measurement ? ' ' + esc(a.unit_of_measurement) : ''}</span></div>`;
     } else if (d === 'alarm_control_panel') {
       h += `<div class="row"><button class="btn" data-a="more">Open the keypad</button></div>`;
     } else if (d === 'camera' && a.entity_picture) {
@@ -1572,8 +1574,8 @@ function createRing(sr, host, CFG) {
     }
   }
   const modeLabel = x => /^boost_\d+$/.test(x) ? 'Boost ' + x.split('_')[1] + ' min' : /^off_\d+$/.test(x) ? 'Off ' + x.split('_')[1] + ' min' : nice(x);
-  const thingChip = (e, act, sub) => `<button class="chip${act ? ' on' : ''}" style="--sc:${e.sc}" data-a="sel" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(sub)}</div></span></button>`;
-  const toggleChip = (e, act) => `<button class="chip${act ? ' on' : ''}" style="--sc:${e.sc}" data-a="lt" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(roomName(e))}</div></span></button>`;
+  const thingChip = (e, act, sub) => `<button class="chip${act ? ' on' : ''}" style="--sc:${esc(e.sc)}" data-a="sel" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(sub)}</div></span></button>`;
+  const toggleChip = (e, act) => `<button class="chip${act ? ' on' : ''}" style="--sc:${esc(e.sc)}" data-a="lt" data-v="${esc(e.eid)}"><i></i><span class="t"><div class="n">${esc(e.name)}</div><div class="s">${esc(roomName(e))}</div></span></button>`;
   const ago = t => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : hhmm(t); };
   function hotCard(el) {
     const head = (t, sc) => { el.style.setProperty('--sc', sc); return `<div class="h"><i></i>${t}<button class="x" data-a="close" aria-label="Close">✕</button></div>`; };
